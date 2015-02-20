@@ -5,6 +5,7 @@
 import argparse
 import logging as log
 import os
+import random
 import re
 import requests
 import subprocess
@@ -33,7 +34,11 @@ class Songza(object):
 
         r = Songza().request("/api/1/search/station", params={'query': query})
 
-        return [Station(str(station['id']), station['name'], station['song_count']) for station in r.json()]
+        stations = [Station(str(station['id']), station['name'], station['song_count']) for station in r.json()]
+        
+        log.debug('Found stations for query "%s": %s' % (query, [str(station) for station in stations]))
+        
+        return stations
 
 class Track(object):
     def __init__(self, url, data):
@@ -57,7 +62,7 @@ class Track(object):
         '''Downloads the song to a temp file.'''
 
         # This is unnecessary right now, since VLC can handle
-        # downloading and caching the files itself
+        # downloading the files itself, and handles deleting them
         
         self.file = tempfile.NamedTemporaryFile(mode='w+b')
 
@@ -102,7 +107,9 @@ class Station(object):
 
         self.track = Track(result['listen_url'], result['song'])
 
-        log.debug('New track for station %s: %s' % (self.id, self.track.title))
+        log.debug('New track for station %s: %s: %s' % (self.id, self.track.artist, self.track.title))
+
+        return self.track
 
     def _vote(self, direction):
         result = Songza.request("/api/1/station/%s/song/%s/vote/%s" % (self.id, self.track.id, direction), method='post')
@@ -308,11 +315,18 @@ class Player(object):
         self.playing = False
         self.stopped = True
 
+        self.random = False
+        self.stations = None
+
         self.vlc = VlcPlayer()
 
     def play(self):
         '''Plays the current track in VLC.'''
-            
+
+        if self.random:
+            self.station = random.choice(self.stations)
+            log.debug('Playing station: %s' % self.station)
+        
         if self.paused:
             self.vlc.play()
             self.paused = False
@@ -347,18 +361,30 @@ class Player(object):
             # Wait for the track to finish playing
             time.sleep(float(sleepTime))
 
-            # Get and play the next track
-            self.track = self.station.next()
-            self.vlc.play(self.track.url)
-        
+            if self.random:
+                # Choose another random station
+                self.station = random.choice(self.stations)
+                log.debug('Now playing station: %s' % self.station)
+                
+                self.track = self.station.next()
+                self.vlc.play(self.track.url)
+            else:
+                # Get and play the next track
+                self.track = self.station.next()
+                self.vlc.play(self.track.url)
         
 def main():
 
     # Parse args
     parser = argparse.ArgumentParser(description='A terminal-based Songza client.')
-    parser.add_argument('-f', '--find',
-                        help="List stations matching input string")
-    parser.add_argument('-s', '--station',
+    parser.add_argument('-f', '--find', nargs='*',
+                        help="List stations matching query strings")
+    parser.add_argument('-r', '--random', action='store_true',
+                        help="Play one random station matching query string")
+    parser.add_argument('-R', '--random-stations', action='store_true',
+                        dest='randomStations',
+                        help="Play one song each from random stations matching query strings")
+    parser.add_argument('-s', '--station', nargs='*',
                         help="A station name, partial station name, or station ID number")
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vv")
     args = parser.parse_args()
@@ -380,47 +406,64 @@ def main():
         parser.help()
         return False
 
+    if args.find and args.station:
+        log.error('Please use -f or -s but not both.')
+        return False
+
+    if args.random and args.randomStations:
+        log.error('Please use either -r or -R but not both.')
+        return False
+        
     player = Player()
-        
+    
     # Handle station arg
-    if args.station:
-        
-        if re.match('^[0-9]+$', args.station):
-            # Station ID
-            player.station = Station(args.station)
-            
+    if args.station or args.find:
+
+        if args.station:
+            queries = args.station
         else:
-            # Station name or partial name
-            stations = Songza.findStations(args.station)
+            queries = args.find
+        
+        # Compile list of stations found
+        stationMatches = []
+        for station in queries:
+            if re.match('^[0-9]+$', station):
+                # Station ID
+                stationMatches.append(Station(station))
 
-            if not stations:
-                log.error('No stations found for query: %s' % args.station)
-                return False
-
-            if len(stations) == 1:
-                # One station found; play it
-                player.station = stations[0]
-                player.play()
-                
             else:
-                # Multiple stations found
-                print '%s stations found:' % len(stations)
-                for station in stations:
-                    print station
-                return False
+                stations = Songza.findStations(station)
 
-    elif args.find:
-         # Find and list stations matching arg
-        stations = Songza.findStations(args.station)
-                    
-        if not stations:
-            log.error('No stations found for query: %s' % args.station)
+                if not stations:
+                    log.error('No stations found for query: %s' % station)
+
+                stationMatches.extend(stations)
+
+        if not stationMatches:
+            log.error('No stations found.')
             return False
 
-        print '%s stations found:' % len(stations)
-        for station in stations:
-            print station
-            return True
+        if len(stationMatches) == 1:
+            # One station found; play it
+            player.station = stationMatches[0]
+            player.play()
+
+        else:
+            # Multiple stations found
+
+            if args.random:
+                player.station = random.choice(stationMatches)
+                print player.station
+                player.play()
+            elif args.randomStations:
+                player.stations = stationMatches
+                player.random = True
+                player.play()
+            else:
+                print '%s stations found:' % len(stationMatches)
+                for station in stationMatches:
+                    print station
+                    return False
     
 if __name__ == '__main__':
     sys.exit(main())
