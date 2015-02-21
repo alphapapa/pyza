@@ -29,7 +29,7 @@ optional arguments:
 ** Examples
 =pyza.py -Rs piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
 ** TODOs
-+ Use signals or something to allow skipping tracks.
++ Use signals or something to allow skipping tracks and voting.
 + Allow searching by mood, concierge, or some of the other things Songza has.
 ** License
 GPLv2
