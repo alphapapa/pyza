@@ -59,7 +59,7 @@ class Track(object):
         return self._reprstr()
 
     def _reprstr(self):
-        return "%s - %s, %s (%s): %s: %s" % (self.artist, self.album, self.title, self.genre, self.id, self.url)
+        return '%s - "%s" from "%s" (%s)' % (self.artist, self.title, self.album, self.genre)
 
     def download(self):
         '''Downloads the song to a temp file.'''
@@ -94,7 +94,7 @@ class Station(object):
 
     def getDetails(self):
         r = Songza.request(self.path).json()
-        self.name = r['name']
+        self.name = r['name'].encode('utf8')
         self.songCount = r['song_count']
         self.description = r['description']
 
@@ -334,12 +334,19 @@ class Player(object):
 
         self.vlc = VlcPlayer()
 
-    def play(self):
-        '''Plays the station or stations in VLC.'''
+    def next(self):
+        '''Plays the next track or next station/track pair depending on random mode.'''
 
         if self.random:
             self.station = random.choice(self.stations)
-            log.debug('Playing station: %s' % self.station)
+            log.info('Playing station: %s' % self.station)
+
+        self.track = self.station.next()
+        self.vlc.play(self.track.url)
+        log.info("Playing track: %s" % self.track)
+
+    def play(self):
+        '''Plays the station or stations in VLC.'''
 
         if self.paused:
             self.vlc.play()
@@ -348,8 +355,7 @@ class Player(object):
 
         elif self.stopped:
             # Get and play the next track
-            self.track = self.station.next()
-            self.vlc.play(self.track.url)
+            self.next()
 
             self.paused = False
             self.playing = True
@@ -375,17 +381,7 @@ class Player(object):
             # Wait for the track to finish playing
             time.sleep(float(sleepTime))
 
-            if self.random:
-                # Choose another random station
-                self.station = random.choice(self.stations)
-                log.debug('Now playing station: %s' % self.station)
-
-                self.track = self.station.next()
-                self.vlc.play(self.track.url)
-            else:
-                # Get and play the next track
-                self.track = self.station.next()
-                self.vlc.play(self.track.url)
+            self.next()
 
 def main():
 
