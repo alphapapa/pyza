@@ -26,6 +26,8 @@ optional arguments:
                         number
   -v, --verbose         Be verbose, up to -vv
 #+END_SRC
+** Examples
+=pyza.py -Rs piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
 ** TODOs
 + Use signals or something to allow skipping tracks.
 + Allow searching by mood, concierge, or some of the other things Songza has.
