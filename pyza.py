@@ -471,7 +471,6 @@ def main():
             if args.random:
                 # Play one random station
                 player.station = random.choice(stationMatches)
-                print player.station
                 player.play()
 
             elif args.randomStations:
