@@ -86,14 +86,14 @@ class Station(object):
         self.nextTrack = None
         self.trackStartTime = None
 
-        self.stationPath = "/api/1/station/" + self.id
+        self.path = "/api/1/station/" + self.id
 
         # TODO: Get station name/songcount if not set
         if not self.name or not self.songCount:
             self.getDetails()
 
     def getDetails(self):
-        r = Songza.request(self.stationPath).json()
+        r = Songza.request(self.path).json()
         self.name = r['name']
         self.songCount = r['song_count']
         self.description = r['description']
@@ -114,7 +114,7 @@ class Station(object):
         '''Set the station's current track to the next track.'''
 
         params = {"cover_size": "m", "format": "aac", "buffer": 0}
-        result = Songza.request(self.stationPath + '/next', params=params, method='post').json()
+        result = Songza.request(self.path + '/next', params=params, method='post').json()
 
         self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
