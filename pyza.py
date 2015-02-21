@@ -35,9 +35,9 @@ class Songza(object):
         r = Songza().request("/api/1/search/station", params={'query': query})
 
         stations = [Station(str(station['id']), station['name'], station['song_count']) for station in r.json()]
-        
+
         log.debug('Found stations for query "%s": %s' % (query, [str(station) for station in stations]))
-        
+
         return stations
 
 class Track(object):
@@ -49,53 +49,45 @@ class Track(object):
         self.duration = data['duration']
         self.genre = data['genre']
         self.id = data['id']
-        
+
         self.file = None
 
     def __repr__(self):
-        return "%s - %s, %s (%s): %s: %s" % (self.artist, self.album, self.title, self.genre, self.id, self.url)    
-        
+        return "%s - %s, %s (%s): %s: %s" % (self.artist, self.album, self.title, self.genre, self.id, self.url)
+
     def __str__(self):
         return "%s - %s, %s (%s): %s: %s" % (self.artist, self.album, self.title, self.genre, self.id, self.url)
-        
+
     def download(self):
         '''Downloads the song to a temp file.'''
 
         # This is unnecessary right now, since VLC can handle
         # downloading the files itself, and handles deleting them
-        
+
         self.file = tempfile.NamedTemporaryFile(mode='w+b')
 
     # TODO: Use __del__?
     def delete(self):
-        '''Deletes the downloaded file.'''    
+        '''Deletes the downloaded file.'''
         self.file.close()
-        
+
 class Station(object):
     def __init__(self, stationID, name=None, songCount=None):
         self.id = stationID
         self.name = name
         self.songCount = songCount
-            
+
         self.previousTrack = None
         self.track = None
         self.nextTrack = None
         self.trackStartTime = None
 
         self.stationPath = "/api/1/station/" + self.id
-        
-        # HTTP headers used for requests
-        # fake the user agent so we're not rejected
-        self.headers = {
-            "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
-            "Accept": "application/json, text/javascript, */*; q=0.01",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.93 Safari/537.36"
-        }
 
         # TODO: Get station name/songcount if not set
 
     def __str__(self):
-        return  '%s: %s (%s songs)' % (self.id, self.name, self.songCount)    
+        return  '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
 
     def next(self):
         '''Set the station's current track to the next track.'''
@@ -103,8 +95,7 @@ class Station(object):
         params = {"cover_size": "m", "format": "aac", "buffer": 0}
         result = Songza.request(self.stationPath + '/next', params=params, method='post').json()
 
-        self.previousTrack = self.track if self.track else None 
-
+        self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
 
         log.debug('New track for station %s: %s: %s' % (self.id, self.track.artist, self.track.title))
@@ -117,11 +108,13 @@ class Station(object):
         log.debug(result)
 
     def downVote(self):
-        self._vote('down')    
-        
-    def upVote(self):
-        self._vote('up')    
+        self._vote('down')
 
+    def upVote(self):
+        self._vote('up')
+
+
+# TODO: Clean up this class
 class VlcPlayer:
 
     def __init__(self, debug=False):
@@ -321,17 +314,17 @@ class Player(object):
         self.vlc = VlcPlayer()
 
     def play(self):
-        '''Plays the current track in VLC.'''
+        '''Plays the station or stations in VLC.'''
 
         if self.random:
             self.station = random.choice(self.stations)
             log.debug('Playing station: %s' % self.station)
-        
+
         if self.paused:
             self.vlc.play()
             self.paused = False
             self.playing = True
-            
+
         elif self.stopped:
             # Get and play the next track
             self.track = self.station.next()
@@ -365,14 +358,14 @@ class Player(object):
                 # Choose another random station
                 self.station = random.choice(self.stations)
                 log.debug('Now playing station: %s' % self.station)
-                
+
                 self.track = self.station.next()
                 self.vlc.play(self.track.url)
             else:
                 # Get and play the next track
                 self.track = self.station.next()
                 self.vlc.play(self.track.url)
-        
+
 def main():
 
     # Parse args
@@ -415,17 +408,15 @@ def main():
     if args.random and args.randomStations:
         log.error('Please use either -r or -R but not both.')
         return False
-        
+
+    # Player object
     player = Player()
-    
-    # Handle station arg
+
+    # Handle args
     if args.station or args.find:
 
-        if args.station:
-            queries = args.station
-        else:
-            queries = args.find
-        
+        queries = args.station or args.find
+
         # Compile list of stations found
         stationMatches = []
         for station in queries:
@@ -443,12 +434,12 @@ def main():
 
         # Exclude stations
         if args.exclude:
-            before = len(stationMatches)
+            countBefore = len(stationMatches)
             stationMatches = [station for e in args.exclude for station in stationMatches if e.lower() not in station.name.lower()]
-            after = len(stationMatches)
+            countAfter = len(stationMatches)
 
-            log.debug('Excluded %s stations.  Stations remaining: %s' % (before - after, [station.name for station in stationMatches]))
-            
+            log.debug('Excluded %s stations.  Stations remaining: %s' % (countBefore - countAfter, [station.name for station in stationMatches]))
+
         if not stationMatches:
             log.error('No stations found.')
             return False
@@ -462,18 +453,24 @@ def main():
             # Multiple stations found
 
             if args.random:
+                # Play one random station
                 player.station = random.choice(stationMatches)
                 print player.station
                 player.play()
+
             elif args.randomStations:
+                # Play random stations one track at a time
                 player.stations = stationMatches
                 player.random = True
                 player.play()
+
             else:
+                # Print list of stations
                 print '%s stations found:' % len(stationMatches)
                 for station in stationMatches:
                     print station
                     return False
-    
+
+
 if __name__ == '__main__':
     sys.exit(main())
