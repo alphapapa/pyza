@@ -1,0 +1,31 @@
+* pyza
+=pyza= is a command-line (or terminal, or console, or whatever you want to call it) Songza client, originally based on [[https://github.com/robu3/mixzatape][MixZaTape]].  It uses VLC to play audio in a subprocess in the background.
+** Usage
+It's pretty self-explanatory:
+
+#+BEGIN_SRC
+usage: pyza.py [-h] [-e [EXCLUDE [EXCLUDE ...]]] [-f [FIND [FIND ...]]] [-r]
+               [-R] [-s [STATION [STATION ...]]] [-v]
+
+A terminal-based Songza client.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -e [EXCLUDE [EXCLUDE ...]], --exclude [EXCLUDE [EXCLUDE ...]]
+                        Exclude stations matching strings
+  -f [FIND [FIND ...]], --find [FIND [FIND ...]]
+                        List stations matching query strings
+  -r, --random          Play one random station matching query string
+  -R, --random-stations
+                        Play one song each from random stations matching query
+                        strings
+  -s [STATION [STATION ...]], --station [STATION [STATION ...]]
+                        A station name, partial station name, or station ID
+                        number
+  -v, --verbose         Be verbose, up to -vv
+#+END_SRC
+** TODOs
++ Use signals or something to allow skipping tracks.
++ Allow searching by mood, concierge, or some of the other things Songza has.
+** License
+GPLv2
