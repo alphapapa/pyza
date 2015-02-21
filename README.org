@@ -5,7 +5,9 @@ It's pretty self-explanatory:
 
 #+BEGIN_SRC
 usage: pyza.py [-h] [-e [EXCLUDE [EXCLUDE ...]]] [-f [FIND [FIND ...]]] [-n]
-               [-r] [-R] [-s [STATION [STATION ...]]] [-v]
+               [-r [RANDOM [RANDOM ...]]]
+               [-R [RANDOMSTATIONS [RANDOMSTATIONS ...]]]
+               [-s [STATION [STATION ...]]] [--sort {name,songs,id}] [-v]
 
 A terminal-based Songza client.
 
@@ -17,17 +19,20 @@ optional arguments:
                         List stations matching query strings
   -n, --names-only      Only search station names, not station descriptions or
                         other data
-  -r, --random          Play one random station matching query string
-  -R, --random-stations
+  -r [RANDOM [RANDOM ...]], --random [RANDOM [RANDOM ...]]
+                        Play one random station matching query string
+  -R [RANDOMSTATIONS [RANDOMSTATIONS ...]], --random-stations [RANDOMSTATIONS [RANDOMSTATIONS ...]]
                         Play one song each from random stations matching query
                         strings
   -s [STATION [STATION ...]], --station [STATION [STATION ...]]
                         A station name, partial station name, or station ID
                         number
+  --sort {name,songs,id}
+                        Sort station list
   -v, --verbose         Be verbose, up to -vv
 #+END_SRC
 ** Examples
-=pyza.py -Rs piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
+=pyza.py -R piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
 ** TODOs
 + Use signals or something to allow skipping tracks and voting.
 + Allow searching by mood, concierge, or some of the other things Songza has.

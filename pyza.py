@@ -36,7 +36,7 @@ class Songza(object):
 
         stations = [Station(str(station['id']), station['name'], station['song_count']) for station in r.json()]
 
-        log.debug('Found stations for query: %s' % ([str(station) for station in stations]))
+        log.debug('Found %s stations for query "%s": %s' % (len(stations), query, [str(station) for station in stations]))
 
         return stations
 
@@ -88,6 +88,12 @@ class Station(object):
         self.stationPath = "/api/1/station/" + self.id
 
         # TODO: Get station name/songcount if not set
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def __hash__(self):
+        return int(self.id)
 
     def __repr__(self):
         return self._reprstr()
@@ -386,13 +392,16 @@ def main():
     parser.add_argument('-n', '--names-only', action='store_true',
                         dest='namesOnly',
                         help="Only search station names, not station descriptions or other data")
-    parser.add_argument('-r', '--random', action='store_true',
+    parser.add_argument('-r', '--random', nargs='*',
                         help="Play one random station matching query string")
-    parser.add_argument('-R', '--random-stations', action='store_true',
+    parser.add_argument('-R', '--random-stations', nargs='*',
                         dest='randomStations',
                         help="Play one song each from random stations matching query strings")
     parser.add_argument('-s', '--station', nargs='*',
                         help="A station name, partial station name, or station ID number")
+    parser.add_argument('--sort', dest='sort', choices=['name', 'songs', 'id'],
+                        default='songs',
+                        help="Sort station list")
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vv")
     args = parser.parse_args()
 
@@ -408,9 +417,9 @@ def main():
     log.debug("Args: %s" % args)
 
     # Check args
-    if not (args.find or args.station):
+    if not (args.find or args.station or args.random or args.randomStations):
         log.error('Please provide a station or search string.')
-        parser.help()
+        parser.print_help()
         return False
 
     if args.find and args.station:
@@ -424,23 +433,35 @@ def main():
     # Player object
     player = Player()
 
-    # Handle args
-    if args.station or args.find:
+    # Handle sort arg
+    sortReverse = False
+    if args.sort:
+        if args.sort == 'songs':
+            sortBy = 'songCount'
+        elif args.sort == 'id':
+            sortBy = 'id'
+            sortReverse = True
+        else:
+            sortBy = args.sort
 
-        queries = args.station or args.find
+    # Handle args
+    if args.station or args.find or args.random or args.randomStations:
+
+        # Put all query strings together and remove dupes
+        queries = set([q for l in [args.station, args.find, args.random, args.randomStations] if l for q in l])
 
         # Compile list of stations found
         stationMatches = []
-        for station in queries:
-            if re.match('^[0-9]+$', station):
+        for query in queries:
+            if re.match('^[0-9]+$', query):
                 # Station ID
-                stationMatches.append(Station(station))
+                stationMatches.append(Station(query))
 
             else:
-                stations = Songza.findStations(station)
+                stations = Songza.findStations(query)
 
                 if not stations:
-                    log.error('No stations found for query: %s' % station)
+                    log.error('No stations found for query: %s' % query)
 
                 stationMatches.extend(stations)
 
@@ -455,6 +476,12 @@ def main():
             countAfter = len(stationMatches)
 
             log.debug('Excluded %s stations.  Stations remaining: %s' % (countBefore - countAfter, [station.name for station in stationMatches]))
+
+        # Remove dupes
+        stationMatches = set(stationMatches)
+
+        # Sort
+        stationMatches = sorted(stationMatches, key=lambda station: getattr(station, sortBy), reverse=sortReverse)
 
         if not stationMatches:
             log.error('No stations found.')
