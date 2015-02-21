@@ -383,6 +383,9 @@ def main():
                         help="Exclude stations matching strings")
     parser.add_argument('-f', '--find', nargs='*',
                         help="List stations matching query strings")
+    parser.add_argument('-n', '--names-only', action='store_true',
+                        dest='namesOnly',
+                        help="Only search station names, not station descriptions or other data")
     parser.add_argument('-r', '--random', action='store_true',
                         help="Play one random station matching query string")
     parser.add_argument('-R', '--random-stations', action='store_true',
@@ -440,6 +443,10 @@ def main():
                     log.error('No stations found for query: %s' % station)
 
                 stationMatches.extend(stations)
+
+        # Search only names
+        if args.namesOnly:
+            stationMatches = [station for q in queries for station in stationMatches if q.lower() in station.name.lower()]
 
         # Exclude stations
         if args.exclude:

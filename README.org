@@ -4,8 +4,8 @@
 It's pretty self-explanatory:
 
 #+BEGIN_SRC
-usage: pyza.py [-h] [-e [EXCLUDE [EXCLUDE ...]]] [-f [FIND [FIND ...]]] [-r]
-               [-R] [-s [STATION [STATION ...]]] [-v]
+usage: pyza.py [-h] [-e [EXCLUDE [EXCLUDE ...]]] [-f [FIND [FIND ...]]] [-n]
+               [-r] [-R] [-s [STATION [STATION ...]]] [-v]
 
 A terminal-based Songza client.
 
@@ -15,6 +15,8 @@ optional arguments:
                         Exclude stations matching strings
   -f [FIND [FIND ...]], --find [FIND [FIND ...]]
                         List stations matching query strings
+  -n, --names-only      Only search station names, not station descriptions or
+                        other data
   -r, --random          Play one random station matching query string
   -R, --random-stations
                         Play one song each from random stations matching query
