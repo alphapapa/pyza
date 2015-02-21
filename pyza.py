@@ -36,26 +36,29 @@ class Songza(object):
 
         stations = [Station(str(station['id']), station['name'], station['song_count']) for station in r.json()]
 
-        log.debug('Found stations for query "%s": %s' % (query, [str(station) for station in stations]))
+        log.debug('Found stations for query: %s' % ([str(station) for station in stations]))
 
         return stations
 
 class Track(object):
     def __init__(self, url, data):
         self.url = url
-        self.album = data['album']
-        self.title = data['title']
-        self.artist = data['artist']['name']
+        self.album = data['album'].encode('utf8')
+        self.title = data['title'].encode('utf8')
+        self.artist = data['artist']['name'].encode('utf8')
         self.duration = data['duration']
-        self.genre = data['genre']
+        self.genre = data['genre'].encode('utf8')
         self.id = data['id']
 
         self.file = None
 
     def __repr__(self):
-        return "%s - %s, %s (%s): %s: %s" % (self.artist, self.album, self.title, self.genre, self.id, self.url)
+        return self._reprstr()
 
     def __str__(self):
+        return self._reprstr()
+
+    def _reprstr(self):
         return "%s - %s, %s (%s): %s: %s" % (self.artist, self.album, self.title, self.genre, self.id, self.url)
 
     def download(self):
@@ -74,7 +77,7 @@ class Track(object):
 class Station(object):
     def __init__(self, stationID, name=None, songCount=None):
         self.id = stationID
-        self.name = name
+        self.name = name.encode('utf8')
         self.songCount = songCount
 
         self.previousTrack = None
@@ -86,8 +89,14 @@ class Station(object):
 
         # TODO: Get station name/songcount if not set
 
+    def __repr__(self):
+        return self._reprstr()
+
     def __str__(self):
-        return  '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
+        return self._reprstr()
+
+    def _reprstr(self):
+        return '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
 
     def next(self):
         '''Set the station's current track to the next track.'''
