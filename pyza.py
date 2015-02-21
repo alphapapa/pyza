@@ -34,9 +34,9 @@ class Songza(object):
 
         r = Songza().request("/api/1/search/station", params={'query': query})
 
-        stations = [Station(str(station['id']), station['name'], station['song_count']) for station in r.json()]
+        stations = [Station(str(station['id']), station['name'], station['song_count'], station['description']) for station in r.json()]
 
-        log.debug('Found %s stations for query "%s": %s' % (len(stations), query, [str(station) for station in stations]))
+        log.debug('Found %s stations for query "%s": %s' % (len(stations), query, [station for station in stations]))
 
         return stations
 
@@ -75,10 +75,11 @@ class Track(object):
         self.file.close()
 
 class Station(object):
-    def __init__(self, stationID, name=None, songCount=None):
+    def __init__(self, stationID, name=None, songCount=None, description=None):
         self.id = stationID
-        self.name = name.encode('utf8')
+        self.name = name.encode('utf8') if name else None
         self.songCount = songCount
+        self.description = description
 
         self.previousTrack = None
         self.track = None
@@ -88,6 +89,14 @@ class Station(object):
         self.stationPath = "/api/1/station/" + self.id
 
         # TODO: Get station name/songcount if not set
+        if not self.name or not self.songCount:
+            self.getDetails()
+
+    def getDetails(self):
+        r = Songza.request(self.stationPath).json()
+        self.name = r['name']
+        self.songCount = r['song_count']
+        self.description = r['description']
 
     def __eq__(self, other):
         return self.id == other.id
@@ -96,13 +105,10 @@ class Station(object):
         return int(self.id)
 
     def __repr__(self):
-        return self._reprstr()
+        return '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
 
     def __str__(self):
-        return self._reprstr()
-
-    def _reprstr(self):
-        return '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
+        return '%s: %s (%s songs): %s' % (self.id, self.name, self.songCount, self.description)
 
     def next(self):
         '''Set the station's current track to the next track.'''
@@ -113,7 +119,7 @@ class Station(object):
         self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
 
-        log.debug('New track for station %s: %s: %s' % (self.id, self.track.artist, self.track.title))
+        log.debug('New track for station %s (%s): %s: %s' % (self.name, self.id, self.track.artist, self.track.title))
 
         return self.track
 
