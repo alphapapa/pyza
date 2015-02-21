@@ -469,7 +469,7 @@ def main():
                 print '%s stations found:' % len(stationMatches)
                 for station in stationMatches:
                     print station
-                    return False
+                return False
 
 
 if __name__ == '__main__':
