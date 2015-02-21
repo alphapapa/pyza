@@ -377,6 +377,8 @@ def main():
 
     # Parse args
     parser = argparse.ArgumentParser(description='A terminal-based Songza client.')
+    parser.add_argument('-e', '--exclude', nargs='*',
+                        help="Exclude stations matching strings")
     parser.add_argument('-f', '--find', nargs='*',
                         help="List stations matching query strings")
     parser.add_argument('-r', '--random', action='store_true',
@@ -439,6 +441,14 @@ def main():
 
                 stationMatches.extend(stations)
 
+        # Exclude stations
+        if args.exclude:
+            before = len(stationMatches)
+            stationMatches = [station for e in args.exclude for station in stationMatches if e.lower() not in station.name.lower()]
+            after = len(stationMatches)
+
+            log.debug('Excluded %s stations.  Stations remaining: %s' % (before - after, [station.name for station in stationMatches]))
+            
         if not stationMatches:
             log.error('No stations found.')
             return False
