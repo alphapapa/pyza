@@ -84,7 +84,7 @@ class Station(object):
         self.id = stationID
         self.name = name.encode('utf8') if name else None
         self.songCount = songCount
-        self.description = description
+        self.description = description.encode('utf8') if description else None
 
         self.previousTrack = None
         self.track = None
@@ -104,7 +104,7 @@ class Station(object):
         r = Songza.request(self.path).json()
         self.name = r['name'].encode('utf8')
         self.songCount = r['song_count']
-        self.description = r['description']
+        self.description = r['description'].encode('utf8')
 
     def __eq__(self, other):
         return self.id == other.id
