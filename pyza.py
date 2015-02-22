@@ -40,8 +40,8 @@ class Songza(object):
                             station['description'])
                     for station in r.json()]
 
-        log.debug('Found %s stations for query "%s": %s'
-                  % (len(stations), query, [station for station in stations]))
+        log.debug('Found %s stations for query "%s": %s',
+                  len(stations), query, [station for station in stations])
 
         return stations
 
@@ -128,8 +128,8 @@ class Station(object):
         self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
 
-        log.debug('New track for station %s (%s): %s: %s'
-                  % (self.name, self.id, self.track.artist, self.track.title))
+        log.debug('New track for station %s (%s): %s: %s',
+                  self.name, self.id, self.track.artist, self.track.title)
 
         return self.track
 
@@ -356,11 +356,11 @@ class Player(object):
 
         if self.random:
             self.station = random.choice(self.stations)
-            log.info('Next station: %s' % self.station)
+            log.info('Next station: %s', self.station)
 
         self.nextTrack = self.station.next()
 
-        log.debug('Next track: %s' % self.nextTrack)
+        log.debug('Next track: %s', self.nextTrack)
 
     def next(self):
         '''Calls subclass's _next() method to play the next track.'''
@@ -372,7 +372,7 @@ class Player(object):
         # makes sense...
         self._next()
 
-        log.info("Playing track: %s" % self.track)
+        log.info("Playing track: %s", self.track)
 
     def play(self):
         '''Starts playing the station or stations.'''
@@ -426,17 +426,17 @@ class MPD(Player):
         try:
             self.player.ping()
         except:
-            log.debug("Connection lost to server: %s.  Reconnecting..."
-                      % self.host)
+            log.debug("Connection lost to server: %s.  Reconnecting...",
+                      self.host)
 
             try:
                 self.player.connect(self.host, self.port)
             except:
-                log.critical("Couldn't reconnect to server: %s"
-                             % self.host)
+                log.critical("Couldn't reconnect to server: %s",
+                             self.host)
                 raise Exception
             else:
-                log.debug("Reconnected to server: %s" % self.host)
+                log.debug("Reconnected to server: %s", self.host)
 
     def _getNextTrack(self):
         '''Gets next track from Player, then adds to MPD playlist and sets
@@ -536,8 +536,8 @@ class MPD(Player):
 
             # Add the next song when the current song changes
             if lastSongID != self.songID:
-                log.debug('Song changed.  Last song:%s  Current song:%s'
-                          % (lastSongID, self.songID))
+                log.debug('Song changed.  Last song:%s  Current song:%s',
+                          lastSongID, self.songID)
 
                 self.next()
                 lastSongID = self.songID
@@ -575,13 +575,13 @@ class VLC(Player):
         while True:
 
             if not self.track.duration:
-                log.critical('Duration not available for track: %s.  This should not happen.'
-                             % self.track)
+                log.critical('Duration not available for track: %s.  This should not happen.',
+                             self.track)
                 raise Exception
 
             sleepTime = self.track.duration
 
-            log.debug('Sleeping for %s seconds' % sleepTime)
+            log.debug('Sleeping for %s seconds', sleepTime)
 
             # Wait for the track to finish playing
             time.sleep(float(sleepTime))
@@ -624,7 +624,7 @@ def main():
         LOG_LEVEL = log.WARNING
     log.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
 
-    log.debug("Args: %s" % args)
+    log.debug("Args: %s", args)
 
     # Check args
     if not (args.find or args.station or args.random or args.randomStations):
@@ -659,17 +659,17 @@ def main():
         try:
             player = MPD(host, port)
         except Exception as e:
-            log.critical("Couldn't connect to MPD server: %s:%s: %s" % (host, port, e))
+            log.critical("Couldn't connect to MPD server: %s:%s: %s", host, port, e)
             return False
         else:
-            log.debug('Connected to MPD server: %s' % host)
+            log.debug('Connected to MPD server: %s', host)
 
     else:
         # Play with VLC
         try:
             player = VLC()
         except Exception as e:
-            log.critical("Couldn't launch VLC: %s" % (e))
+            log.critical("Couldn't launch VLC: %s", e)
             return False
 
     # Handle sort arg
@@ -704,7 +704,7 @@ def main():
                 stations = Songza.findStations(query)
 
                 if not stations:
-                    log.error('No stations found for query: %s' % query)
+                    log.error('No stations found for query: %s', query)
 
                 stationMatches.extend(stations)
 
@@ -724,8 +724,8 @@ def main():
                               if e.lower() not in station.name.lower()]
             countAfter = len(stationMatches)
 
-            log.debug('Excluded %s stations.  Stations remaining: %s'
-                      % (countBefore - countAfter, [station.name for station in stationMatches]))
+            log.debug('Excluded %s stations.  Stations remaining: %s',
+                      countBefore - countAfter, [station.name for station in stationMatches])
 
         # Remove dupes
         stationMatches = set(stationMatches)
