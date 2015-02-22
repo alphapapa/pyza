@@ -1,38 +1,44 @@
 * pyza
-=pyza= is a command-line (or terminal, or console, or whatever you want to call it) Songza client, originally based on [[https://github.com/robu3/mixzatape][MixZaTape]].  It uses VLC to play audio in a subprocess in the background.
+=pyza= is a command-line (or terminal, or console, or whatever you want to call it) Songza client, originally based on [[https://github.com/robu3/mixzatape][MixZaTape]].  It can use VLC to play audio in a subprocess in the background, or send tracks to an MPD server to play.
 
+** Requirements
++ Python 2.7+ (it might work on 2.6...)
++ VLC or MPD
++ MPD support requires =python-mpd= >= version 0.5.4.  This is from the forked version known as =python-mpd2=, which may not be packaged in your distro yet.  You can install it with =pip=.
+  
 ** Usage
 It's pretty self-explanatory:
 
 #+BEGIN_SRC
-usage: pyza.py [-h] [-e [EXCLUDE [EXCLUDE ...]]] [-f [FIND [FIND ...]]] [-n]
-               [-r [RANDOM [RANDOM ...]]]
-               [-R [RANDOMSTATIONS [RANDOMSTATIONS ...]]]
-               [-s [STATION [STATION ...]]] [--sort {name,songs,id}] [-v]
+usage: pyza.py [-h] [-e [STRING [STRING ...]]] [-f [STRING [STRING ...]]] [-n]
+               [-m [HOST[:PORT]]] [-r [STRING [STRING ...]]]
+               [-R [STRING [STRING ...]]] [-s [STATION [STATION ...]]]
+               [--sort {name,songs,id}] [-v]
 
-A terminal-based Songza client.
+A terminal-based Songza client.  Plays with VLC by default.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -e [EXCLUDE [EXCLUDE ...]], --exclude [EXCLUDE [EXCLUDE ...]]
+  -e [STRING [STRING ...]], --exclude [STRING [STRING ...]]
                         Exclude stations matching strings
-  -f [FIND [FIND ...]], --find [FIND [FIND ...]]
-                        List stations matching query strings
+  -f [STRING [STRING ...]], --find [STRING [STRING ...]]
+                        List stations matching strings
   -n, --names-only      Only search station names, not station descriptions or
                         other data
-  -r [RANDOM [RANDOM ...]], --random [RANDOM [RANDOM ...]]
-                        Play one random station matching query string
-  -R [RANDOMSTATIONS [RANDOMSTATIONS ...]], --random-stations [RANDOMSTATIONS [RANDOMSTATIONS ...]]
-                        Play one song each from random stations matching query
+  -m [HOST[:PORT]], --mpd [HOST[:PORT]]
+                        Play with MPD server. Default: localhost:6600
+  -r [STRING [STRING ...]], --random [STRING [STRING ...]]
+                        Play one random station matching string
+  -R [STRING [STRING ...]], --random-stations [STRING [STRING ...]]
+                        Play one song each from random stations matching
                         strings
   -s [STATION [STATION ...]], --station [STATION [STATION ...]]
                         A station name, partial station name, or station ID
                         number
   --sort {name,songs,id}
-                        Sort station list
+                        Sort station list. Default: number of songs
   -v, --verbose         Be verbose, up to -vv
 #+END_SRC
-
 ** Examples
 =pyza.py -R piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
 

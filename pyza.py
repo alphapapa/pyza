@@ -18,7 +18,7 @@ class Songza(object):
     REQUEST_HEADERS = {
         "Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
         "Accept": "application/json, text/javascript, */*; q=0.01",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.93 Safari/537.36"}
+        "User-Agent": "" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/27.0.1453.93 Safari/537.36"""}
 
     @staticmethod
     def request(path, params=None, method='get'):
@@ -32,11 +32,16 @@ class Songza(object):
     def findStations(query):
         '''Returns list of Station objects for query string.'''
 
-        r = Songza().request("/api/1/search/station", params={'query': query})
+        r = Songza.request("/api/1/search/station", params={'query': query})
 
-        stations = [Station(str(station['id']), station['name'], station['song_count'], station['description']) for station in r.json()]
+        stations = [Station(str(station['id']),
+                            station['name'],
+                            station['song_count'],
+                            station['description'])
+                    for station in r.json()]
 
-        log.debug('Found %s stations for query "%s": %s' % (len(stations), query, [station for station in stations]))
+        log.debug('Found %s stations for query "%s": %s'
+                  % (len(stations), query, [station for station in stations]))
 
         return stations
 
@@ -90,9 +95,12 @@ class Station(object):
 
         # TODO: Get station name/songcount if not set
         if not self.name or not self.songCount:
-            self.getDetails()
+            self._getDetails()
 
-    def getDetails(self):
+    def _getDetails(self):
+        '''Gets song details and sets name, songCount, and description
+        attributes.'''
+
         r = Songza.request(self.path).json()
         self.name = r['name'].encode('utf8')
         self.songCount = r['song_count']
@@ -108,10 +116,11 @@ class Station(object):
         return '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
 
     def __str__(self):
-        return '%s: %s (%s songs): %s' % (self.id, self.name, self.songCount, self.description)
+        return '%s: %s (%s songs): %s' % (self.id, self.name,
+                                          self.songCount, self.description)
 
     def next(self):
-        '''Set the station's current track to the next track.'''
+        '''Set the station's current track to the next track and returns next track.'''
 
         params = {"cover_size": "m", "format": "aac", "buffer": 0}
         result = Songza.request(self.path + '/next', params=params, method='post').json()
@@ -119,12 +128,15 @@ class Station(object):
         self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
 
-        log.debug('New track for station %s (%s): %s: %s' % (self.name, self.id, self.track.artist, self.track.title))
+        log.debug('New track for station %s (%s): %s: %s'
+                  % (self.name, self.id, self.track.artist, self.track.title))
 
         return self.track
 
     def _vote(self, direction):
-        result = Songza.request("/api/1/station/%s/song/%s/vote/%s" % (self.id, self.track.id, direction), method='post')
+        result = Songza.request("/api/1/station/%s/song/%s/vote/%s"
+                                % (self.id, self.track.id, direction),
+                                method='post')
 
         log.debug(result)
 
@@ -329,27 +341,44 @@ class Player(object):
         self.playing = False
         self.stopped = True
 
+        self.position = None
+
         self.random = False
         self.stations = None
 
-        self.vlc = VlcPlayer()
+        self.outputURLs = False
 
-    def next(self):
-        '''Plays the next track or next station/track pair depending on random mode.'''
+        self.nextTrack = None
+
+    def _getNextTrack(self):
+        '''Sets the station depending on random mode, then sets the next
+        track.'''
 
         if self.random:
             self.station = random.choice(self.stations)
-            log.info('Playing station: %s' % self.station)
+            log.info('Next station: %s' % self.station)
 
-        self.track = self.station.next()
-        self.vlc.play(self.track.url)
+        self.nextTrack = self.station.next()
+
+        log.debug('Next track: %s' % self.nextTrack)
+
+    def next(self):
+        '''Calls subclass's _next() method to play the next track.'''
+
+        # Rather than redefine the child class's next() method, I call
+        # a private method so that it's obvious that a child class
+        # must define _next().  Otherwise it wouldn't be obvious that
+        # a child class would have to redefine next().  I think this
+        # makes sense...
+        self._next()
+
         log.info("Playing track: %s" % self.track)
 
     def play(self):
-        '''Plays the station or stations in VLC.'''
+        '''Starts playing the station or stations.'''
 
         if self.paused:
-            self.vlc.play()
+            self.player.play(self.track.url)
             self.paused = False
             self.playing = True
 
@@ -361,20 +390,196 @@ class Player(object):
             self.playing = True
             self.stopped = False
 
+
+class MPD(Player):
+    DEFAULT_PORT = 6600
+
+    def __init__(self, host, port=DEFAULT_PORT, password=None):
+        self.host = host
+        self.port = port
+        self.password = password
+
+        # Import python-mpd2.  This might not be the "correct" way to
+        # do this, putting the import down here, but this way people
+        # can use the script without having python-mpd2.
+        import mpd
+        if mpd.VERSION < (0, 5, 4):
+            log.critical('Using MPD requires python-mpd >= 0.5.4 (aka python-mpd2).')
+            raise Exception
+
+        super(MPD, self).__init__()
+
+        self.player = mpd.MPDClient()
+
+        self.player.connect(self.host, self.port)
+
+        self.nextSongID = None  # Song ID number
+
+        self._getPlaylist()
+        self._status()
+
+    def _checkConnection(self):
+        '''Pings the server and reconnects if necessary.'''
+
+        # I don't know why the connection tends to get dropped, but it
+        # does.  This takes care of it.
+        try:
+            self.player.ping()
+        except:
+            log.debug("Connection lost to server: %s.  Reconnecting..."
+                      % self.host)
+
+            try:
+                self.player.connect(self.host, self.port)
+            except:
+                log.critical("Couldn't reconnect to server: %s"
+                             % self.host)
+                raise Exception
+            else:
+                log.debug("Reconnected to server: %s" % self.host)
+
+    def _getNextTrack(self):
+        '''Gets next track from Player, then adds to MPD playlist and sets
+        self.nextSongID.'''
+
+        super(MPD, self)._getNextTrack()
+
+        self.nextSongID = self._add(self.nextTrack)
+
+    def _next(self):
+        '''Gets the next track from the current station and then plays it.'''
+
+        # When the playlist is empty (first time), get the first track
+        if self.nextTrack is None:
+            self._getNextTrack()
+
+        # Play the next song if it's not already playing; otherwise
+        # MPD probably skipped to the next track
+        if self.songID != self.nextSongID:
+            self._play(self.nextSongID)
+
+        # Set the player's track object to the track now playing
+        self.track = self.nextTrack
+
+        # Get the next track and add it to the playlist
+        self._getNextTrack()
+
+    def _getPlaylist(self):
+        '''Gets playlist from server and sets self.playlist.'''
+
+        self._checkConnection()
+
+        self.playlist = self.player.playlist()
+
+    def _add(self, track):
+        '''Adds track to playlist and returns new track's songID.'''
+
+        self._checkConnection()
+
+        songID = int(self.player.addid(track.url))
+
+        # TODO: Figure out why sometimes the tags don't seem to get
+        # added, even though there are no errors
+        self.player.addtagid(songID, 'artist', track.artist)
+        self.player.addtagid(songID, 'album', track.album)
+        self.player.addtagid(songID, 'title', track.title)
+        self.player.addtagid(songID, 'genre', track.genre)
+
+        # TODO: Figure out a way to set the track's duration in MPD.
+        # As it is now, MPD gets the duration from the file by itself,
+        # but then it doesn't update the duration in the playlist, so
+        # the playlist shows "0:00" for it.  MPD doesn't let you set
+        # the duration for a song with the addtagid command.  Maybe
+        # this could be considered a bug in MPD, that it doesn't
+        # update the duration in the playlist after it finds it out,
+        # because MPD does display the duration in the current status
+        # info, just not in the playlist.
+
+        return songID
+
+    def _play(self, songID):
+        '''Plays songID.'''
+
+        self._checkConnection()
+
+        self.player.playid(songID)
+        self.songID = songID
+
+    def _status(self):
+        '''Gets status of MPD server and updates attributes.'''
+
+        self._checkConnection()
+
+        self.currentStatus = self.player.status()
+
+        self.playing = True if self.currentStatus['state'] == 'play' else False
+        self.paused = True if self.currentStatus['state'] == 'pause' else False
+
+        self.songID = int(self.currentStatus['songid']) if 'songid' in self.currentStatus else None
+        self.position = self.currentStatus['elapsed'] if 'elapsed' in self.currentStatus else None
+
+    def play(self):
+        '''Calls parent play() method to set the current station, then
+        monitors MPD and adds the next track when necessary.'''
+
+        super(MPD, self).play()
+        lastSongID = self.songID
+
+        while True:
+
+            # 3 seconds seems reasonable to start with.  Since
+            # status() causes debug output, doing it every second
+            # results in a LOT of debug output.
+            time.sleep(3)
+
+            self._status()
+
+            # Add the next song when the current song changes
+            if lastSongID != self.songID:
+                log.debug('Song changed.  Last song:%s  Current song:%s'
+                          % (lastSongID, self.songID))
+
+                self.next()
+                lastSongID = self.songID
+
+class VLC(Player):
+    def __init__(self):
+        super(VLC, self).__init__()
+
+        self.player = VlcPlayer()
+
+        log.debug("Initialized VLC Player.")
+
+    def _next(self):
+        '''Gets next track and plays it.'''
+
+        self._getNextTrack()
+        self.track = self.nextTrack
+        self.player.play(self.track.url)
+
+    def _status(self):
+        '''Updates player status and position.'''
+
+        # In this future this may be used to let VLC skip tracks.
+        # Right now it's unused.
+
+        self.position = self.player.get_time()
+
+    def play(self):
+        '''Calls parent play() method, then loops, sleeping for the track's
+        duration and then starting the next track.'''
+
+        super(VLC, self).play()
+
         # Loop
         while True:
 
-            # Get the sleep time from VLC, but it doesn't have the
-            # time remaining until it has downloaded some of the file
-            sleepTime = None
-            tries = 0
-            while not sleepTime and tries < 10:  # 2 seconds
-                time.sleep(0.2)
-                sleepTime = self.vlc.time_remaining()
-                tries += 1
-            if not sleepTime:
-                log.error('No time remaining reported by VLC.  Maybe the track failed to download.')
-                raise
+            if not self.track.duration:
+                log.critical('Duration not available for track: %s.  This should not happen.'
+                             % self.track)
+                raise Exception
+
+            sleepTime = self.track.duration
 
             log.debug('Sleeping for %s seconds' % sleepTime)
 
@@ -386,24 +591,27 @@ class Player(object):
 def main():
 
     # Parse args
-    parser = argparse.ArgumentParser(description='A terminal-based Songza client.')
-    parser.add_argument('-e', '--exclude', nargs='*',
+    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.')
+    parser.add_argument('-e', '--exclude', nargs='*', metavar='STRING',
                         help="Exclude stations matching strings")
-    parser.add_argument('-f', '--find', nargs='*',
-                        help="List stations matching query strings")
+    parser.add_argument('-f', '--find', nargs='*', metavar='STRING',
+                        help="List stations matching strings")
     parser.add_argument('-n', '--names-only', action='store_true',
                         dest='namesOnly',
                         help="Only search station names, not station descriptions or other data")
-    parser.add_argument('-r', '--random', nargs='*',
-                        help="Play one random station matching query string")
-    parser.add_argument('-R', '--random-stations', nargs='*',
+    parser.add_argument('-m', '--mpd', nargs='?', metavar='HOST[:PORT]',
+                        const='localhost:6600',
+                        help="Play with MPD server.  Default: localhost:6600")
+    parser.add_argument('-r', '--random', nargs='*', metavar='STRING',
+                        help="Play one random station matching string")
+    parser.add_argument('-R', '--random-stations', nargs='*', metavar='STRING',
                         dest='randomStations',
-                        help="Play one song each from random stations matching query strings")
-    parser.add_argument('-s', '--station', nargs='*',
+                        help="Play one song each from random stations matching strings")
+    parser.add_argument('-s', '--station', nargs='*', metavar='STATION',
                         help="A station name, partial station name, or station ID number")
     parser.add_argument('--sort', dest='sort', choices=['name', 'songs', 'id'],
                         default='songs',
-                        help="Sort station list")
+                        help="Sort station list.  Default: number of songs")
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vv")
     args = parser.parse_args()
 
@@ -425,15 +633,44 @@ def main():
         return False
 
     if args.find and args.station:
-        log.error('Please use -f or -s but not both.')
+        log.error('Please use either -f or -s but not both.')
         return False
 
     if args.random and args.randomStations:
         log.error('Please use either -r or -R but not both.')
         return False
 
-    # Player object
-    player = Player()
+    # Handle player arg
+    if args.mpd:
+        # Play with MPD
+
+        if len(args.mpd) > 0:
+            # Get host and port if given
+            if ':' in args.mpd:
+                host, port = args.mpd.split(':')
+            else:
+                host = args.mpd
+                port = MPD.DEFAULT_PORT
+        else:
+            # Use defaults
+            host = 'localhost'
+            port = MPD.DEFAULT_PORT
+
+        try:
+            player = MPD(host, port)
+        except Exception as e:
+            log.critical("Couldn't connect to MPD server: %s:%s: %s" % (host, port, e))
+            return False
+        else:
+            log.debug('Connected to MPD server: %s' % host)
+
+    else:
+        # Play with VLC
+        try:
+            player = VLC()
+        except Exception as e:
+            log.critical("Couldn't launch VLC: %s" % (e))
+            return False
 
     # Handle sort arg
     sortReverse = False
@@ -444,13 +681,17 @@ def main():
             sortBy = 'id'
             sortReverse = True
         else:
-            sortBy = args.sort
+            sortBy = 'name'
 
     # Handle args
     if args.station or args.find or args.random or args.randomStations:
 
         # Put all query strings together and remove dupes
-        queries = set([q for l in [args.station, args.find, args.random, args.randomStations] if l for q in l])
+        queries = set([q
+                       for l in [args.station, args.find,
+                                 args.random, args.randomStations]
+                       if l
+                       for q in l])
 
         # Compile list of stations found
         stationMatches = []
@@ -469,21 +710,30 @@ def main():
 
         # Search only names
         if args.namesOnly:
-            stationMatches = [station for q in queries for station in stationMatches if q.lower() in station.name.lower()]
+            stationMatches = [station
+                              for q in queries
+                              for station in stationMatches
+                              if q.lower() in station.name.lower()]
 
         # Exclude stations
         if args.exclude:
             countBefore = len(stationMatches)
-            stationMatches = [station for e in args.exclude for station in stationMatches if e.lower() not in station.name.lower()]
+            stationMatches = [station
+                              for e in args.exclude
+                              for station in stationMatches
+                              if e.lower() not in station.name.lower()]
             countAfter = len(stationMatches)
 
-            log.debug('Excluded %s stations.  Stations remaining: %s' % (countBefore - countAfter, [station.name for station in stationMatches]))
+            log.debug('Excluded %s stations.  Stations remaining: %s'
+                      % (countBefore - countAfter, [station.name for station in stationMatches]))
 
         # Remove dupes
         stationMatches = set(stationMatches)
 
         # Sort
-        stationMatches = sorted(stationMatches, key=lambda station: getattr(station, sortBy), reverse=sortReverse)
+        stationMatches = sorted(stationMatches,
+                                key=lambda station: getattr(station, sortBy),
+                                reverse=sortReverse)
 
         if not stationMatches:
             log.error('No stations found.')
