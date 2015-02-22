@@ -378,18 +378,12 @@ class Player(object):
     def play(self):
         '''Starts playing the station or stations.'''
 
-        if self.paused:
-            self.player.play(self.track.url)
-            self.paused = False
-            self.playing = True
+        # Get and play the next track
+        self.next()
 
-        elif self.stopped:
-            # Get and play the next track
-            self.next()
-
-            self.paused = False
-            self.playing = True
-            self.stopped = False
+        self.paused = False
+        self.playing = True
+        self.stopped = False
 
 
 class MPD(Player):
@@ -410,9 +404,9 @@ class MPD(Player):
 
         super(MPD, self).__init__()
 
-        self.player = mpd.MPDClient()
+        self.mpd = mpd.MPDClient()
 
-        self.player.connect(self.host, self.port)
+        self.mpd.connect(self.host, self.port)
 
         self.nextSongID = None  # Song ID number
 
@@ -425,13 +419,13 @@ class MPD(Player):
         # I don't know why the connection tends to get dropped, but it
         # does.  This takes care of it.
         try:
-            self.player.ping()
+            self.mpd.ping()
         except:
             log.debug("Connection lost to server: %s.  Reconnecting...",
                       self.host)
 
             try:
-                self.player.connect(self.host, self.port)
+                self.mpd.connect(self.host, self.port)
             except:
                 log.critical("Couldn't reconnect to server: %s",
                              self.host)
@@ -470,21 +464,21 @@ class MPD(Player):
 
         self._checkConnection()
 
-        self.playlist = self.player.playlist()
+        self.playlist = self.mpd.playlist()
 
     def _add(self, track):
         '''Adds track to playlist and returns new track's songID.'''
 
         self._checkConnection()
 
-        songID = int(self.player.addid(track.url))
+        songID = int(self.mpd.addid(track.url))
 
         # TODO: Figure out why sometimes the tags don't seem to get
         # added, even though there are no errors
-        self.player.addtagid(songID, 'artist', track.artist)
-        self.player.addtagid(songID, 'album', track.album)
-        self.player.addtagid(songID, 'title', track.title)
-        self.player.addtagid(songID, 'genre', track.genre)
+        self.mpd.addtagid(songID, 'artist', track.artist)
+        self.mpd.addtagid(songID, 'album', track.album)
+        self.mpd.addtagid(songID, 'title', track.title)
+        self.mpd.addtagid(songID, 'genre', track.genre)
 
         # TODO: Figure out a way to set the track's duration in MPD.
         # As it is now, MPD gets the duration from the file by itself,
@@ -503,7 +497,7 @@ class MPD(Player):
 
         self._checkConnection()
 
-        self.player.playid(songID)
+        self.mpd.playid(songID)
         self.songID = songID
 
     def _status(self):
@@ -511,7 +505,7 @@ class MPD(Player):
 
         self._checkConnection()
 
-        self.currentStatus = self.player.status()
+        self.currentStatus = self.mpd.status()
 
         self.playing = True if self.currentStatus['state'] == 'play' else False
         self.paused = True if self.currentStatus['state'] == 'pause' else False
