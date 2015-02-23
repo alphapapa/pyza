@@ -17,7 +17,7 @@ class Songza(object):
     SONGZA_URL_PREFIX = 'https://songza.com'
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                        "Accept": "application/json, text/javascript, */*; q=0.01",
-                       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X" 
+                       "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
                        + "10_8_3) AppleWebKit/537.36 (KHTML, like Gecko)"
                        + "Chrome/27.0.1453.93 Safari/537.36"}
 
@@ -583,6 +583,13 @@ class VLC(Player):
 
             self.next()
 
+
+def printStations(stations):
+    # Print list of stations
+    print '%s stations found:' % len(stations)
+    for station in stations:
+        print station
+
 def main():
 
     # Parse args
@@ -734,31 +741,36 @@ def main():
             log.error('No stations found.')
             return False
 
-        if len(stationMatches) == 1:
-            # One station found; play it
-            player.station = stationMatches[0]
-            player.play()
+        if args.find:
+            # Just print matches
+            printStations(stationMatches)
+            return True
 
         else:
-            # Multiple stations found
+            # Play stations
 
-            if args.random:
-                # Play one random station
-                player.station = random.choice(stationMatches)
-                player.play()
-
-            elif args.randomStations:
-                # Play random stations one track at a time
-                player.stations = stationMatches
-                player.random = True
+            if len(stationMatches) == 1:
+                # One station found; play it
+                player.station = stationMatches[0]
                 player.play()
 
             else:
-                # Print list of stations
-                print '%s stations found:' % len(stationMatches)
-                for station in stationMatches:
-                    print station
-                return False
+                # Multiple stations found
+
+                if args.random:
+                    # Play one random station
+                    player.station = random.choice(stationMatches)
+                    player.play()
+
+                elif args.randomStations:
+                    # Play random stations one track at a time
+                    player.stations = stationMatches
+                    player.random = True
+                    player.play()
+
+                else:
+                    printStations(stationMatches)
+                    return False
 
 
 if __name__ == '__main__':
