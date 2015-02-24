@@ -1,5 +1,5 @@
 * pyza
-=pyza= is a command-line (or terminal, or console, or whatever you want to call it) Songza client, originally based on [[https://github.com/robu3/mixzatape][MixZaTape]].  It can use VLC to play audio in a subprocess in the background, or send tracks to an MPD server to play.  It runs best on Linux, but you can probably run it on OS X, and you might be able to get it working on Windows.
+=pyza= is a command-line (or terminal, or console, or whatever you want to call it) Songza player, originally based on [[https://github.com/robu3/mixzatape][MixZaTape]].  It can use VLC to play audio in a subprocess in the background, or send tracks to an MPD server to play.  It runs best on Linux, but you can probably run it on OS X, and you might be able to get it working on Windows.
 
 ** Requirements
 + Python 2.7+ (it might work on 2.6...)
