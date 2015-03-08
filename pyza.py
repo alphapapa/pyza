@@ -284,7 +284,7 @@ class VlcPlayer:
                 if match_dur:
                     duration = int(match_dur.group(1))
                 else:
-                    self.logger.debug("unable to parse time remaining text: {0}",
+                    self.log.debug("unable to parse time remaining text: {0}",
                                       response_text)
 
                 # attempt to read current time elasped
@@ -294,7 +294,7 @@ class VlcPlayer:
                 if match_rem:
                     remaining = int(match_rem.group(1))
                 else:
-                    self.logger.debug("unable to parse time remaining text: {0}",
+                    self.log.debug("unable to parse time remaining text: {0}",
                                       response_text)
 
                 # duration = int(self.send_command_readline("get_length\n")[2:])
