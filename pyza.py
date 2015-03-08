@@ -371,6 +371,10 @@ class Player(object):
         # must define _next().  Otherwise it wouldn't be obvious that
         # a child class would have to redefine next().  I think this
         # makes sense...
+
+        # TODO: Use the @abc.abstractmethod decorator as explained
+        # here: https://julien.danjou.info/blog/2013/guide-python-static-class-abstract-methods
+        # Or will that work, since I use log.info here?
         self._next()
 
         log.info("Playing track: %s", self.track)
