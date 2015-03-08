@@ -60,26 +60,9 @@ class Track(object):
         self.file = None
 
     def __repr__(self):
-        return self._reprstr()
+        return '%s: "%s" from "%s" (%s)' % (self.artist, self.title, self.album, self.genre)
 
-    def __str__(self):
-        return self._reprstr()
-
-    def _reprstr(self):
-        return '%s - "%s" from "%s" (%s)' % (self.artist, self.title, self.album, self.genre)
-
-    def download(self):
-        '''Downloads the song to a temp file.'''
-
-        # This is unnecessary right now, since VLC can handle
-        # downloading the files itself, and handles deleting them
-
-        self.file = tempfile.NamedTemporaryFile(mode='w+b')
-
-    # TODO: Use __del__?
-    def delete(self):
-        '''Deletes the downloaded file.'''
-        self.file.close()
+    __str__ = __repr__
 
 class Station(object):
     def __init__(self, stationID, name=None, songCount=None, description=None):
