@@ -678,38 +678,6 @@ def main():
         log.error('Please use either -r or -R but not both.')
         return False
 
-    # Handle player arg
-    if args.mpd:
-        # Play with MPD
-
-        if len(args.mpd) > 0:
-            # Get host and port if given
-            if ':' in args.mpd:
-                host, port = args.mpd.split(':')
-            else:
-                host = args.mpd
-                port = MPD.DEFAULT_PORT
-        else:
-            # Use defaults
-            host = 'localhost'
-            port = MPD.DEFAULT_PORT
-
-        try:
-            player = MPD(host, port)
-        except Exception as e:
-            log.critical("Couldn't connect to MPD server: %s:%s: %s", host, port, e)
-            return False
-        else:
-            log.debug('Connected to MPD server: %s', host)
-
-    else:
-        # Play with VLC
-        try:
-            player = VLC()
-        except Exception as e:
-            log.critical("Couldn't launch VLC: %s", e)
-            return False
-
     # Handle sort arg
     sortReverse = False
     if args.sort:
@@ -773,18 +741,57 @@ def main():
                                 key=lambda station: getattr(station, sortBy),
                                 reverse=sortReverse)
 
+        # Check result
         if not stationMatches:
             log.error('No stations found.')
             return False
 
+        # Finding or playing stations?
         if args.find:
             # Just print matches
             printStations(stationMatches)
             return True
 
         else:
-            # Play stations
+            # Actually playing music
 
+            # Handle player arg
+            if args.mpd:
+                # Play with MPD
+
+                # Get host and port if given
+                if len(args.mpd) > 0:
+                    # Host given
+                    if ':' in args.mpd:
+                        # Port given
+                        host, port = args.mpd.split(':')
+                    else:
+                        # Use default port
+                        host = args.mpd
+                        port = MPD.DEFAULT_PORT
+                else:
+                    # Use default host and port
+                    host = 'localhost'
+                    port = MPD.DEFAULT_PORT
+
+                try:
+                    player = MPD(host, port, excludes=args.exclude, logger=log)
+                except Exception as e:
+                    log.critical("Couldn't connect to MPD server: %s:%s: %s", host, port, e)
+                    return False
+                else:
+                    log.debug('Connected to MPD server: %s', host)
+
+            else:
+                # Play with VLC
+                try:
+                    player = VLC(excludes=args.exclude, logger=log)
+                except Exception as e:
+                    log.critical("Couldn't launch VLC: %s", e)
+                    return False
+
+
+            # Play stations
             if len(stationMatches) == 1:
                 # One station found; play it
                 player.station = stationMatches[0]
@@ -805,6 +812,7 @@ def main():
                     player.play()
 
                 else:
+                    # Just list stations
                     printStations(stationMatches)
                     return False
 
