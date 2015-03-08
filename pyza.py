@@ -615,7 +615,7 @@ class VLC(Player):
 def printStations(stations):
     # Print list of stations
     print '%s stations found:' % len(stations)
-    for station in stations:
+    for station in sorted(stations, key=lambda s: s.name):
         print station
 
 def main():
