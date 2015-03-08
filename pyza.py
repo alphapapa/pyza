@@ -28,8 +28,8 @@ class Songza(object):
 
         url = Songza.SONGZA_URL_PREFIX + path
 
-        return getattr(requests, method)(url, params=params, headers=Songza.REQUEST_HEADERS)
-
+        return getattr(requests, method)(url, params=params,
+                                           headers=Songza.REQUEST_HEADERS)
     @staticmethod
     def findStations(query):
         '''Returns list of Station objects for query string.'''
@@ -80,7 +80,7 @@ class Station(object):
 
         self.path = "/api/1/station/" + self.id
 
-        # TODO: Get station name/songcount if not set
+        # Get station name/songcount if not set
         if not self.name or not self.songCount:
             self._getDetails()
 
@@ -116,13 +116,13 @@ class Station(object):
         self.track = Track(result['listen_url'], result['song'])
 
         self.log.debug('New track for station %s (%s): %s: %s',
-                  self.name, self.id, self.track.artist, self.track.title)
+                       self.name, self.id, self.track.artist, self.track.title)
 
         return self.track
 
     def _vote(self, direction):
-        result = Songza.request("/api/1/station/%s/song/%s/vote/%s"
-                                % (self.id, self.track.id, direction),
+        result = Songza.request("/api/1/station/%s/song/%s/vote/%s" %
+                                (self.id, self.track.id, direction),
                                 method='post')
 
         self.log.debug(result)
@@ -285,8 +285,8 @@ class VlcPlayer:
                 if match_dur:
                     duration = int(match_dur.group(1))
                 else:
-                    self.logger.debug(
-                        "unable to parse time remaining text: {0}", response_text)
+                    self.logger.debug("unable to parse time remaining text: {0}",
+                                      response_text)
 
                 # attempt to read current time elasped
                 response_text = self.send_command_readline("get_time\n")
@@ -295,8 +295,8 @@ class VlcPlayer:
                 if match_rem:
                     remaining = int(match_rem.group(1))
                 else:
-                    self.logger.debug(
-                        "unable to parse time remaining text: {0}", response_text)
+                    self.logger.debug("unable to parse time remaining text: {0}",
+                                      response_text)
 
                 # duration = int(self.send_command_readline("get_length\n")[2:])
                 # remaining = int(self.send_command_readline("get_time\n")[2:])
@@ -407,13 +407,13 @@ class MPD(Player):
             self.mpd.ping()
         except:
             self.log.debug("Connection lost to server: %s.  Reconnecting...",
-                      self.host)
+                           self.host)
 
             try:
                 self.mpd.connect(self.host, self.port)
             except:
                 self.log.critical("Couldn't reconnect to server: %s",
-                             self.host)
+                                  self.host)
                 raise Exception
             else:
                 self.log.debug("Reconnected to server: %s", self.host)
@@ -584,7 +584,7 @@ class VLC(Player):
 
             if not self.track.duration:
                 self.log.critical('Duration not available for track: %s.  This should not happen.',
-                             self.track)
+                                  self.track)
                 raise Exception
 
             sleepTime = self.track.duration
