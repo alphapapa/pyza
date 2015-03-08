@@ -3,7 +3,7 @@
 # Based on MixZaTape
 
 import argparse
-import logging as log
+import logging
 import os
 import random
 import re
@@ -20,6 +20,7 @@ class Songza(object):
                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
                        + "10_8_3) AppleWebKit/537.36 (KHTML, like Gecko)"
                        + "Chrome/27.0.1453.93 Safari/537.36"}
+    logger = logging.getLogger('Songza')
 
     @staticmethod
     def request(path, params=None, method='get'):
@@ -41,8 +42,8 @@ class Songza(object):
                             station['description'])
                     for station in r.json()]
 
-        log.debug('Found %s stations for query "%s": %s',
-                  len(stations), query, [station for station in stations])
+        Songza.logger.debug('Found %s stations for query "%s": %s',
+                            len(stations), query, [station for station in stations])
 
         return stations
 
@@ -82,6 +83,8 @@ class Track(object):
 
 class Station(object):
     def __init__(self, stationID, name=None, songCount=None, description=None):
+        self.log = logging.getLogger(self.__class__.__name__)
+
         self.id = stationID
         self.name = name.encode('utf8') if name else None
         self.songCount = songCount
@@ -129,7 +132,7 @@ class Station(object):
         self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
 
-        log.debug('New track for station %s (%s): %s: %s',
+        self.log.debug('New track for station %s (%s): %s: %s',
                   self.name, self.id, self.track.artist, self.track.title)
 
         return self.track
@@ -139,7 +142,7 @@ class Station(object):
                                 % (self.id, self.track.id, direction),
                                 method='post')
 
-        log.debug(result)
+        self.log.debug(result)
 
     def downVote(self):
         self._vote('down')
@@ -151,7 +154,9 @@ class Station(object):
 # TODO: Clean up this class
 class VlcPlayer:
 
-    def __init__(self, debug=False):
+    def __init__(self):
+        self.log = logging.getChild(self.__class__.__name__)
+
         self.process = None
 
         # is_paused
@@ -160,8 +165,6 @@ class VlcPlayer:
         self.is_paused = False
 
         self.time = 0
-
-        self.debug = debug
 
         # regex used to parse VLC STDOUT for time remaining
         # sometimes we get extra prompt characters that need to be trimmed
@@ -172,15 +175,6 @@ class VlcPlayer:
         logpath = "./.player.log"
         if os.path.exists(logpath):
             os.remove(logpath)
-
-        if self.debug:
-            self.logger = logging.getLogger("player")
-            handler = logging.FileHandler(logpath)
-            formatter = logging.Formatter(
-                "%(asctime)s %(levelname)s %(message)s")
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
-            self.logger.setLevel(logging.DEBUG)
 
     # def __del__(self):
         # self.process.close()
@@ -335,6 +329,8 @@ class VlcPlayer:
 
 class Player(object):
     def __init__(self):
+        self.log = logging.getLogger(self.__class__.__name__)
+
         self.station = None
         self.track = None
 
@@ -357,11 +353,11 @@ class Player(object):
 
         if self.random:
             self.station = random.choice(self.stations)
-            log.info('Next station: %s', self.station)
+            self.log.info('Next station: %s', self.station)
 
         self.nextTrack = self.station.next()
 
-        log.debug('Next track: %s', self.nextTrack)
+        self.log.debug('Next track: %s', self.nextTrack)
 
     def next(self):
         '''Calls subclass's _next() method to play the next track.'''
@@ -377,7 +373,7 @@ class Player(object):
         # Or will that work, since I use log.info here?
         self._next()
 
-        log.info("Playing track: %s", self.track)
+        self.log.info("Playing track: %s", self.track)
 
     def play(self):
         '''Starts playing the station or stations.'''
@@ -394,6 +390,8 @@ class MPD(Player):
     DEFAULT_PORT = 6600
 
     def __init__(self, host, port=DEFAULT_PORT, password=None):
+        self.log = logging.getLogger().getChild(self.__class__.__name__)
+
         self.host = host
         self.port = port
         self.password = password
@@ -403,7 +401,7 @@ class MPD(Player):
         # can use the script without having python-mpd2.
         import mpd
         if mpd.VERSION < (0, 5, 4):
-            log.critical('Using MPD requires python-mpd >= 0.5.4 (aka python-mpd2).')
+            self.log.critical('Using MPD requires python-mpd >= 0.5.4 (aka python-mpd2).')
             raise Exception
 
         super(MPD, self).__init__()
@@ -425,17 +423,17 @@ class MPD(Player):
         try:
             self.mpd.ping()
         except:
-            log.debug("Connection lost to server: %s.  Reconnecting...",
+            self.log.debug("Connection lost to server: %s.  Reconnecting...",
                       self.host)
 
             try:
                 self.mpd.connect(self.host, self.port)
             except:
-                log.critical("Couldn't reconnect to server: %s",
+                self.log.critical("Couldn't reconnect to server: %s",
                              self.host)
                 raise Exception
             else:
-                log.debug("Reconnected to server: %s", self.host)
+                self.log.debug("Reconnected to server: %s", self.host)
 
     def _getNextTrack(self):
         '''Gets next track from Player, then adds to MPD playlist and sets
@@ -535,8 +533,8 @@ class MPD(Player):
 
             # Add the next song when the current song changes
             if lastSongID != self.songID:
-                log.debug('Song changed.  Last song:%s  Current song:%s',
-                          lastSongID, self.songID)
+                self.log.debug('Song changed.  Last song:%s  Current song:%s',
+                               lastSongID, self.songID)
 
                 self.next()
                 lastSongID = self.songID
@@ -547,7 +545,7 @@ class VLC(Player):
 
         self.player = VlcPlayer()
 
-        log.debug("Initialized VLC Player.")
+        self.log.debug("Initialized VLC Player.")
 
     def _next(self):
         '''Gets next track and plays it.'''
@@ -574,13 +572,13 @@ class VLC(Player):
         while True:
 
             if not self.track.duration:
-                log.critical('Duration not available for track: %s.  This should not happen.',
+                self.log.critical('Duration not available for track: %s.  This should not happen.',
                              self.track)
                 raise Exception
 
             sleepTime = self.track.duration
 
-            log.debug('Sleeping for %s seconds', sleepTime)
+            self.log.debug('Sleeping for %s seconds', sleepTime)
 
             # Wait for the track to finish playing
             time.sleep(float(sleepTime))
@@ -623,12 +621,14 @@ def main():
 
     # Setup logging
     if args.verbose == 1:
-        LOG_LEVEL = log.INFO
+        LOG_LEVEL = logging.INFO
     elif args.verbose >=2:
-        LOG_LEVEL = log.DEBUG
+        LOG_LEVEL = logging.DEBUG
     else:
-        LOG_LEVEL = log.WARNING
-    log.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(message)s")
+        LOG_LEVEL = logging.WARNING
+    logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(name)s: %(message)s")
+
+    log = logging.getLogger('pyza')
 
     log.debug("Args: %s", args)
 
