@@ -533,6 +533,8 @@ class MPD(Player):
         self.songID = int(self.currentStatus['songid']) if 'songid' in self.currentStatus else None
         self.position = self.currentStatus['elapsed'] if 'elapsed' in self.currentStatus else None
 
+        self.currentSong = self.mpd.currentsong()
+
     def play(self):
         '''Calls parent play() method to set the current station, then
         monitors MPD and adds the next track when necessary.'''
@@ -556,6 +558,14 @@ class MPD(Player):
 
                 self.next()
                 lastSongID = self.songID
+
+                # Set the tags again, since they seem to get messed up
+                if ('artist' not in self.currentSong
+                    or self.currentSong['artist'] != self.track.artist):
+
+                    self.log.debug('Tags disappeared.  Adding again...')
+
+                    self._addTags(self.songID, self.track)
 
 class VLC(Player):
     def __init__(self):
