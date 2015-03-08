@@ -138,7 +138,7 @@ class Station(object):
 class VlcPlayer:
 
     def __init__(self):
-        self.log = logging.getChild(self.__class__.__name__)
+        self.log = logging.getLogger().getChild(self.__class__.__name__)
 
         self.process = None
 
@@ -311,8 +311,8 @@ class VlcPlayer:
 
 
 class Player(object):
-    def __init__(self):
-        self.log = logging.getLogger(self.__class__.__name__)
+    def __init__(self, excludes=None, logger=None):
+        self.log = logger.getChild(self.__class__.__name__)
 
         self.station = None
         self.track = None
@@ -372,9 +372,7 @@ class Player(object):
 class MPD(Player):
     DEFAULT_PORT = 6600
 
-    def __init__(self, host, port=DEFAULT_PORT, password=None):
-        self.log = logging.getLogger().getChild(self.__class__.__name__)
-
+    def __init__(self, host, port=DEFAULT_PORT, password=None, **kwargs):
         self.host = host
         self.port = port
         self.password = password
@@ -387,7 +385,7 @@ class MPD(Player):
             self.log.critical('Using MPD requires python-mpd >= 0.5.4 (aka python-mpd2).')
             raise Exception
 
-        super(MPD, self).__init__()
+        super(MPD, self).__init__(**kwargs)
 
         self.mpd = mpd.MPDClient()
 
@@ -551,8 +549,8 @@ class MPD(Player):
                     self._addTags(self.songID, self.track)
 
 class VLC(Player):
-    def __init__(self):
-        super(VLC, self).__init__()
+    def __init__(self, **kwargs):
+        super(VLC, self).__init__(**kwargs)
 
         self.player = VlcPlayer()
 
@@ -633,10 +631,15 @@ def main():
     # Setup logging
     if args.verbose == 1:
         LOG_LEVEL = logging.INFO
+
+        # Stop requests' INFO messages, which really should be DEBUGs
+        logging.getLogger("requests").setLevel(logging.WARNING)
+
     elif args.verbose >=2:
         LOG_LEVEL = logging.DEBUG
     else:
         LOG_LEVEL = logging.WARNING
+
     logging.basicConfig(level=LOG_LEVEL, format="%(levelname)s: %(name)s: %(message)s")
 
     log = logging.getLogger('pyza')
