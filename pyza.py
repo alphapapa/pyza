@@ -540,13 +540,13 @@ class MPD(Player):
         super(MPD, self).play()
         lastSongID = self.songID
 
+        # Loop waiting for track change
         while True:
 
-            # 3 seconds seems reasonable to start with.  Since
-            # status() causes debug output, doing it every second
-            # results in a LOT of debug output.
-            time.sleep(3)
+            # Wait for a change
+            self.mpd.idle()
 
+            # Get player status info
             self._status()
 
             # Add the next song when the current song changes
