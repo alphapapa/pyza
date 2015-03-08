@@ -10,7 +10,6 @@ import re
 import requests
 import subprocess
 import sys
-import tempfile
 import time
 
 class Songza(object):
@@ -305,7 +304,7 @@ class VlcPlayer:
                     timeRemaining = duration - remaining
 
             except Exception, ex:
-                log.error("error: " + str(ex))
+                self.log.error("error: " + str(ex))
 
         return timeRemaining
 
