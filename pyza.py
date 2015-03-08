@@ -736,9 +736,9 @@ def main():
         if args.exclude:
             countBefore = len(stationMatches)
             stationMatches = [station
-                              for e in args.exclude
                               for station in stationMatches
-                              if e.lower() not in station.name.lower()]
+                              if not any(e.lower() in station.name.lower()
+                                         for e in args.exclude)]
             countAfter = len(stationMatches)
 
             log.debug('Excluded %s stations.  Stations remaining: %s',
