@@ -477,10 +477,7 @@ class MPD(Player):
 
         # TODO: Figure out why sometimes the tags don't seem to get
         # added, even though there are no errors
-        self.mpd.addtagid(songID, 'artist', track.artist)
-        self.mpd.addtagid(songID, 'album', track.album)
-        self.mpd.addtagid(songID, 'title', track.title)
-        self.mpd.addtagid(songID, 'genre', track.genre)
+        self._addTags(songID, track)
 
         # TODO: Figure out a way to set the track's duration in MPD.
         # As it is now, MPD gets the duration from the file by itself,
@@ -493,6 +490,27 @@ class MPD(Player):
         # info, just not in the playlist.
 
         return songID
+
+    def  _addTags(self, songID, track):
+        '''Adds artist/album/title/genre tags to a songID.'''
+
+        self._checkConnection()
+
+        # Start command list
+        self.mpd.command_list_ok_begin()
+
+        self.mpd.addtagid(songID, 'artist', track.artist)
+        self.mpd.addtagid(songID, 'album', track.album)
+        self.mpd.addtagid(songID, 'title', track.title)
+
+        # Clear the genre tag first, because tracks can have multiple
+        # genres in MPD, and if you add the same genre tag twice, it
+        # will show up twice
+        self.mpd.cleartagid(songID, 'genre')
+        self.mpd.addtagid(songID, 'genre', track.genre)
+
+        # Execute command list
+        self.mpd.command_list_end()
 
     def _play(self, songID):
         '''Plays songID.'''
