@@ -725,7 +725,8 @@ def main():
             countBefore = len(stationMatches)
             stationMatches = [station
                               for station in stationMatches
-                              if not any(e.lower() in station.name.lower()
+                              if not any(e.lower() in s
+                                         for s in [station.name.lower(), station.description.lower()]
                                          for e in args.exclude)]
             countAfter = len(stationMatches)
 
