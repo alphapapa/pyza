@@ -314,6 +314,8 @@ class Player(object):
     def __init__(self, excludes=None, logger=None):
         self.log = logger.getChild(self.__class__.__name__)
 
+        self.excludes = excludes
+
         self.station = None
         self.track = None
 
@@ -334,11 +336,27 @@ class Player(object):
         '''Sets the station depending on random mode, then sets the next
         track.'''
 
-        if self.random:
-            self.station = random.choice(self.stations)
-            self.log.info('Next station: %s', self.station)
+        self.nextTrack = None
+        while not self.nextTrack:
+            if self.random:
+                self.station = random.choice(self.stations)
+                self.log.info('Next station: %s', self.station)
 
-        self.nextTrack = self.station.next()
+            self.nextTrack = self.station.next()
+
+            # Check track against excludes.  Do not check genre,
+            # because Songza does things like use the genre
+            # "Classical/Opera" for all classical tracks, even if they
+            # have nothing to do with opera.
+            if self.excludes:
+                if any(e in t
+                       for t in [self.nextTrack.artist.lower(), self.nextTrack.album.lower(),
+                                 self.nextTrack.title.lower()]
+                       for e in self.excludes):
+
+                    self.log.info('Excluding track: %s', self.nextTrack)
+
+                    self.nextTrack = None
 
         self.log.debug('Next track: %s', self.nextTrack)
 
