@@ -115,8 +115,8 @@ class Station(object):
         self.previousTrack = self.track if self.track else None
         self.track = Track(result['listen_url'], result['song'])
 
-        self.log.debug('New track for station %s (%s): %s: %s',
-                       self.name, self.id, self.track.artist, self.track.title)
+        self.log.debug('New track for station %s (%s): %s',
+                       self.name, self.id, self.track)
 
         return self.track
 
