@@ -133,178 +133,112 @@ class Station(object):
         self._vote('up')
 
 
-# TODO: Clean up this class
 class VlcPlayer:
 
+    REGEXP_TIME_REMAINING = re.compile('[> ]*(\d*)\r\n')
+    
     def __init__(self):
         self.log = logging.getLogger().getChild(self.__class__.__name__)
 
         self.process = None
+        self.paused = None
+        self.time = None
 
-        # is_paused
-        # =========
-        # True if playback is currently paused
-        self.is_paused = False
+    def _sendCommand(self, command, readline=False):
+        '''Sends the specified command to the player.  If readline is True,
+        returns a line of response from STDOUT.'''
+        
+        self.process.stdin.write(command + "\n".encode("utf-8"))
 
-        self.time = 0
-
-        # regex used to parse VLC STDOUT for time remaining
-        # sometimes we get extra prompt characters that need to be trimmed
-        self.time_remaining_regex = r"[> ]*(\d*)\r\n"
-
-        # setup logger
-        # clear log on startup
-        logpath = "./.player.log"
-        if os.path.exists(logpath):
-            os.remove(logpath)
-
-    # def __del__(self):
-        # self.process.close()
-
-    # send_command(command)
-    # =====================
-    # Sends the specified command to the player
-    def send_command(self, command):
-        if self.process is not None:
-            self.process.stdin.write(command.encode("utf-8"))
-
-    # send_command_readline(command)
-    # ==============================
-    # Sends the specified command to the player, and returns on line of
-    # response from STDOUT
-    def send_command_readline(self, command):
-        if self.process is not None:
-            self.process.stdin.write(command.encode("utf-8"))
-
-            # make sure to forward to the end
+        if readline:
             return self.process.stdout.readline()
 
-        return None
+    def volumeUp(self):
+        self._sendCommand("volup")
 
-    # is_open()
-    # =========
-    # Returns true if the player is currently open.
-    def is_open(self):
-        return bool(self.process)
+    def volumeDown(self):
+        self._sendCommand("voldown")
 
-    # volume_up()
-    # ===========
-    # Raises the volume.
-    def volume_up(self):
-        self.send_command_readline("volup\n")
-
-    # volume_down()
-    # ============
-    # Lowers the volume.
-    def volume_down(self):
-        self.send_command_readline("voldown\n")
-
-    # pause()
-    # =======
-    # Pauses playback.
     def pause(self):
-        self.is_paused = not self.is_paused
-        self.send_command("pause\n")
+        self.paused = True
+        self._sendCommand("pause")
 
-    # stop()
-    # ======
-    # Stops all playback, shutting down the player.
     def stop(self):
-        self.send_command("shutdown\n")
+        self._sendCommand("shutdown")
         self.process = None
+        self.paused = None
 
-    # enqueue(file)
-    # =============
-    # Adds a file to queue.
     def enqueue(self, file):
-        self.send_command("enqueue " + file + "\n")
+        self._sendCommand("enqueue " + file)
 
-    # skip()
-    # ======
-    # Skips the current track
     def skip(self):
-        self.send_command("next\n")
+        self._sendCommand("next")
         self.time = 0
 
-    # seek(seconds)
-    # =============
-    # Skips the current track
     def seek(self, seconds):
-        self.send_command("seek {0}\n".format(seconds))
-        # update time value
-        # self.time += seconds
+        self._sendCommand("seek {0}".format(seconds))
 
-    # get_time()
-    # ==========
-    # Gets the running time in for the current track.
-    def get_time(self):
+    def getTime(self):
+        '''Gets time elapsed, sets self.time, and returns it.'''
+        
         try:
-            # buffer the current time value
-            self.time = int(self.send_command_readline("get_time\n")[2:])
+            self.time = int(self._sendCommand("get_time", readline=True)[2:])
         finally:
-            # Sometimes when seeking, VLC is slow to respond, and the STDOUT output
-            # gets out of sync. In this case, return the last know time value.
+            # Sometimes when seeking, VLC is slow to respond, and the
+            # STDOUT output gets out of sync. In this case, return the
+            # last known time value.
             return self.time
 
-    # play(file)
-    # ==========
-    # Plays the file with the specified name.
     def play(self, file):
-        # print "filename: " + file
+        '''Plays file, either enqueueing in existing process or starting VLC.'''
 
-        # if already playing, add the next file to the queue
-        if self.is_open():
-            # print "is open"
+        if self.process:
+            # Already running
             self.enqueue(file)
             self.skip()
         else:
+            # Not running; start VLC
             self.process = subprocess.Popen(["vlc", "-Irc", "--quiet", file],
                                             shell=False,
                                             stdout=subprocess.PIPE,
                                             stdin=subprocess.PIPE,
                                             stderr=subprocess.STDOUT)
-
             self.process.stdout.readline()
             self.process.stdout.readline()
 
-    # time_remaining()
-    # ================
-    # The amount of time remaining on the current track.
-    def time_remaining(self):
+        self.paused = False
+
+    def getTimeRemaining(self):
+        '''Returns time remaining in seconds.'''
+
+        duration = None
+        remaining = None
         timeRemaining = None
 
-        if (self.is_open()):
-            try:
+        try:
+            response = self._sendCommand("get_length", readline=True)
+            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
 
-                # use regex to chop off leading chars
-                # attempt to read duration of track
-                response_text = self.send_command_readline("get_length\n")
-                match_dur = re.search(self.time_remaining_regex, response_text)
+            if match:
+                duration = int(match.group(1))
+            else:
+                self.log.debug("Unable to parse duration: %s",
+                                  response)
 
-                if match_dur:
-                    duration = int(match_dur.group(1))
-                else:
-                    self.log.debug("unable to parse time remaining text: {0}",
-                                      response_text)
+            response = self._sendCommand("getTime", readline=True)
+            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
 
-                # attempt to read current time elasped
-                response_text = self.send_command_readline("get_time\n")
-                match_rem = re.search(self.time_remaining_regex, response_text)
+            if match:
+                remaining = int(match.group(1))
+            else:
+                self.log.debug("Unable to parse time remaining: %s",
+                                  response)
 
-                if match_rem:
-                    remaining = int(match_rem.group(1))
-                else:
-                    self.log.debug("unable to parse time remaining text: {0}",
-                                      response_text)
+            if duration and remaining:
+                timeRemaining = duration - remaining
 
-                # duration = int(self.send_command_readline("get_length\n")[2:])
-                # remaining = int(self.send_command_readline("get_time\n")[2:])
-
-                if match_dur and match_rem:
-                    timeRemaining = duration - remaining
-
-            except Exception, ex:
-                self.log.error("error: " + str(ex))
+        except Exception:
+            self.log.exception("Couldn't get time remaining:")
 
         return timeRemaining
 
@@ -586,7 +520,7 @@ class VLC(Player):
         # In this future this may be used to let VLC skip tracks.
         # Right now it's unused.
 
-        self.position = self.player.get_time()
+        self.position = self.player.getTime()
 
     def play(self):
         '''Calls parent play() method, then loops, sleeping for the track's
