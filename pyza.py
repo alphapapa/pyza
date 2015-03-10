@@ -652,7 +652,7 @@ def main():
         # Stop requests' INFO messages, which really should be DEBUGs
         logging.getLogger("requests").setLevel(logging.WARNING)
 
-    elif args.verbose >=2:
+    elif args.verbose >= 2:
         LOG_LEVEL = logging.DEBUG
     else:
         LOG_LEVEL = logging.WARNING
