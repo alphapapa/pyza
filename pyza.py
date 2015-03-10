@@ -636,14 +636,16 @@ def main():
         stationMatches = []
         for query in queries:
             if re.match('^[0-9]+$', query):
-                # Station ID
+                # Station ID number
                 stationMatches.append(Station(query))
 
             else:
+                # Search for string
                 stations = Songza.findStations(query)
 
                 if not stations:
                     log.error('No stations found for query: %s', query)
+                    continue
 
                 stationMatches.extend(stations)
 
@@ -680,27 +682,27 @@ def main():
             log.error('No stations found.')
             return False
 
-        # Finding or playing stations?
+        # List or play stations
         if args.find:
-            # Just print matches
+            # List stations
             printStations(stationMatches)
             return True
 
         else:
-            # Actually playing music
+            # Play stations
 
-            # Handle player arg
+            # Setup player
             if args.mpd:
                 # Play with MPD
 
-                # Get host and port if given
+                # Get host and port
                 if len(args.mpd) > 0:
                     # Host given
                     if ':' in args.mpd:
                         # Port given
                         host, port = args.mpd.split(':')
                     else:
-                        # Use default port
+                        # Use given host and default port
                         host = args.mpd
                         port = MPD.DEFAULT_PORT
                 else:
