@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 
+# * pyza.py
 # Based on MixZaTape
 
+# ** Imports
 import argparse
 import logging
-import os
 import random
 import re
 import requests
@@ -12,6 +13,9 @@ import subprocess
 import sys
 import time
 
+
+# ** Classes
+# *** Songza
 class Songza(object):
     SONGZA_URL_PREFIX = 'https://songza.com'
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
@@ -46,6 +50,8 @@ class Songza(object):
 
         return stations
 
+
+
 class Track(object):
     def __init__(self, url, data):
         self.url = url
@@ -62,6 +68,7 @@ class Track(object):
         return '%s: "%s" from "%s" (%s)' % (self.artist, self.title, self.album, self.genre)
 
     __str__ = __repr__
+
 
 class Station(object):
     def __init__(self, stationID, name=None, songCount=None, description=None):
@@ -132,117 +139,7 @@ class Station(object):
     def upVote(self):
         self._vote('up')
 
-
-class VlcPlayer:
-
-    REGEXP_TIME_REMAINING = re.compile('[> ]*(\d*)\r\n')
-    
-    def __init__(self):
-        self.log = logging.getLogger().getChild(self.__class__.__name__)
-
-        self.process = None
-        self.paused = None
-        self.time = None
-
-    def _sendCommand(self, command, readline=False):
-        '''Sends the specified command to the player.  If readline is True,
-        returns a line of response from STDOUT.'''
-        
-        self.process.stdin.write(command + "\n".encode("utf-8"))
-
-        if readline:
-            return self.process.stdout.readline()
-
-    def volumeUp(self):
-        self._sendCommand("volup")
-
-    def volumeDown(self):
-        self._sendCommand("voldown")
-
-    def pause(self):
-        self.paused = True
-        self._sendCommand("pause")
-
-    def stop(self):
-        self._sendCommand("shutdown")
-        self.process = None
-        self.paused = None
-
-    def enqueue(self, file):
-        self._sendCommand("enqueue " + file)
-
-    def skip(self):
-        self._sendCommand("next")
-        self.time = 0
-
-    def seek(self, seconds):
-        self._sendCommand("seek {0}".format(seconds))
-
-    def getTime(self):
-        '''Gets time elapsed, sets self.time, and returns it.'''
-        
-        try:
-            self.time = int(self._sendCommand("get_time", readline=True)[2:])
-        finally:
-            # Sometimes when seeking, VLC is slow to respond, and the
-            # STDOUT output gets out of sync. In this case, return the
-            # last known time value.
-            return self.time
-
-    def play(self, file):
-        '''Plays file, either enqueueing in existing process or starting VLC.'''
-
-        if self.process:
-            # Already running
-            self.enqueue(file)
-            self.skip()
-        else:
-            # Not running; start VLC
-            self.process = subprocess.Popen(["vlc", "-Irc", "--quiet", file],
-                                            shell=False,
-                                            stdout=subprocess.PIPE,
-                                            stdin=subprocess.PIPE,
-                                            stderr=subprocess.STDOUT)
-            self.process.stdout.readline()
-            self.process.stdout.readline()
-
-        self.paused = False
-
-    def getTimeRemaining(self):
-        '''Returns time remaining in seconds.'''
-
-        duration = None
-        remaining = None
-        timeRemaining = None
-
-        try:
-            response = self._sendCommand("get_length", readline=True)
-            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
-
-            if match:
-                duration = int(match.group(1))
-            else:
-                self.log.debug("Unable to parse duration: %s",
-                                  response)
-
-            response = self._sendCommand("getTime", readline=True)
-            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
-
-            if match:
-                remaining = int(match.group(1))
-            else:
-                self.log.debug("Unable to parse time remaining: %s",
-                                  response)
-
-            if duration and remaining:
-                timeRemaining = duration - remaining
-
-        except Exception:
-            self.log.exception("Couldn't get time remaining:")
-
-        return timeRemaining
-
-
+# *** Player
 class Player(object):
     def __init__(self, excludes=None, logger=None):
         self.log = logger.getChild(self.__class__.__name__)
@@ -499,6 +396,7 @@ class MPD(Player):
 
                     self._addTags(self.songID, self.track)
 
+
 class VLC(Player):
     def __init__(self, **kwargs):
         super(VLC, self).__init__(**kwargs)
@@ -546,15 +444,126 @@ class VLC(Player):
             self.next()
 
 
+class VlcPlayer:
+
+    REGEXP_TIME_REMAINING = re.compile('[> ]*(\d*)\r\n')
+
+    def __init__(self):
+        self.log = logging.getLogger().getChild(self.__class__.__name__)
+
+        self.process = None
+        self.paused = None
+        self.time = None
+
+    def _sendCommand(self, command, readline=False):
+        '''Sends the specified command to the player.  If readline is True,
+        returns a line of response from STDOUT.'''
+
+        self.process.stdin.write(command + "\n".encode("utf-8"))
+
+        if readline:
+            return self.process.stdout.readline()
+
+    def volumeUp(self):
+        self._sendCommand("volup")
+
+    def volumeDown(self):
+        self._sendCommand("voldown")
+
+    def pause(self):
+        self.paused = True
+        self._sendCommand("pause")
+
+    def stop(self):
+        self._sendCommand("shutdown")
+        self.process = None
+        self.paused = None
+
+    def enqueue(self, file):
+        self._sendCommand("enqueue " + file)
+
+    def skip(self):
+        self._sendCommand("next")
+        self.time = 0
+
+    def seek(self, seconds):
+        self._sendCommand("seek {0}".format(seconds))
+
+    def getTime(self):
+        '''Gets time elapsed, sets self.time, and returns it.'''
+
+        try:
+            self.time = int(self._sendCommand("get_time", readline=True)[2:])
+        finally:
+            # Sometimes when seeking, VLC is slow to respond, and the
+            # STDOUT output gets out of sync. In this case, return the
+            # last known time value.
+            return self.time
+
+    def play(self, file):
+        '''Plays file, either enqueueing in existing process or starting VLC.'''
+
+        if self.process:
+            # Already running
+            self.enqueue(file)
+            self.skip()
+        else:
+            # Not running; start VLC
+            self.process = subprocess.Popen(["vlc", "-Irc", "--quiet", file],
+                                            shell=False,
+                                            stdout=subprocess.PIPE,
+                                            stdin=subprocess.PIPE,
+                                            stderr=subprocess.STDOUT)
+            self.process.stdout.readline()
+            self.process.stdout.readline()
+
+        self.paused = False
+
+    def getTimeRemaining(self):
+        '''Returns time remaining in seconds.'''
+
+        duration = None
+        remaining = None
+        timeRemaining = None
+
+        try:
+            response = self._sendCommand("get_length", readline=True)
+            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
+
+            if match:
+                duration = int(match.group(1))
+            else:
+                self.log.debug("Unable to parse duration: %s",
+                                  response)
+
+            response = self._sendCommand("getTime", readline=True)
+            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
+
+            if match:
+                remaining = int(match.group(1))
+            else:
+                self.log.debug("Unable to parse time remaining: %s",
+                                  response)
+
+            if duration and remaining:
+                timeRemaining = duration - remaining
+
+        except Exception:
+            self.log.exception("Couldn't get time remaining:")
+
+        return timeRemaining
+
+# ** Functions
 def printStations(stations):
     # Print list of stations
     print '%s stations found:' % len(stations)
     for station in sorted(stations, key=lambda s: s.name):
         print station
 
+
 def main():
 
-    # Parse args
+    # **** Parse args
     parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.')
     parser.add_argument('-e', '--exclude', nargs='*', metavar='STRING',
                         help="Exclude stations matching strings")
@@ -579,7 +588,7 @@ def main():
     parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vv")
     args = parser.parse_args()
 
-    # Setup logging
+    # **** Setup logging
     if args.verbose == 1:
         LOG_LEVEL = logging.INFO
 
@@ -597,7 +606,7 @@ def main():
 
     log.debug("Args: %s", args)
 
-    # Check args
+    # **** Check args
     if not (args.find or args.station or args.random or args.randomStations):
         log.error('Please provide a station or search string.')
         parser.print_help()
@@ -611,7 +620,7 @@ def main():
         log.error('Please use either -r or -R but not both.')
         return False
 
-    # Handle sort arg
+    # **** Handle sort arg
     sortReverse = False
     if args.sort:
         if args.sort == 'songs':
@@ -622,9 +631,10 @@ def main():
         else:
             sortBy = 'name'
 
-    # Handle args
+    # **** Play or list stations
     if args.station or args.find or args.random or args.randomStations:
 
+        # ***** Put together station list
         # Put all query strings together and remove dupes
         queries = set([q
                        for l in [args.station, args.find,
@@ -682,18 +692,18 @@ def main():
             log.error('No stations found.')
             return False
 
-        # List or play stations
+        # ***** List or play stations
         if args.find:
-            # List stations
+            # ****** List stations
             printStations(stationMatches)
             return True
 
         else:
-            # Play stations
+            # ****** Play stations
 
-            # Setup player
+            # ******* Setup player
             if args.mpd:
-                # Play with MPD
+                # ******** Play with MPD
 
                 # Get host and port
                 if len(args.mpd) > 0:
@@ -719,7 +729,7 @@ def main():
                     log.debug('Connected to MPD server: %s', host)
 
             else:
-                # Play with VLC
+                # ******** Play with VLC
                 try:
                     player = VLC(excludes=args.exclude, logger=log)
                 except Exception as e:
@@ -727,14 +737,14 @@ def main():
                     return False
 
 
-            # Play stations
+            # ******* Play stations
             if len(stationMatches) == 1:
-                # One station found; play it
+                # ******** One station found; play it
                 player.station = stationMatches[0]
                 player.play()
 
             else:
-                # Multiple stations found
+                # ******** Multiple stations found
 
                 if args.random:
                     # Play one random station
@@ -752,6 +762,6 @@ def main():
                     printStations(stationMatches)
                     return False
 
-
+# ** __main__
 if __name__ == '__main__':
     sys.exit(main())
