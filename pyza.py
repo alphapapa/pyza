@@ -630,22 +630,22 @@ def printStations(stations, query):
 def main():
 
     # **** Parse args
-    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.')
-    parser.add_argument('-e', '--exclude', nargs='*', metavar='STRING',
-                        help="Exclude stations matching strings")
-    parser.add_argument('-f', '--find', nargs='*', metavar='STRING',
-                        help="List stations matching strings")
+    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.  Queries may be plain queries which will match against station names and descriptions, or they may be in the form of {activity|a,genre|g,mood|m}:query to search for stations by activity, genre, or mood.  For example: "pyza -f reading" or "pyza -f genre:jazz" or "pyza -f mood:happy" ')
+    parser.add_argument('-e', '--exclude', nargs='*',metavar='QUERY',
+                        help="Exclude stations matching queries")
+    parser.add_argument('-f', '--find', nargs='*',metavar='QUERY',
+                        help="List stations matching queries")
     parser.add_argument('-n', '--names-only', action='store_true',
                         dest='namesOnly',
                         help="Only search station names, not station descriptions or other data")
     parser.add_argument('-m', '--mpd', nargs='?', metavar='HOST[:PORT]',
                         const='localhost:6600',
                         help="Play with MPD server.  Default: localhost:6600")
-    parser.add_argument('-r', '--random', nargs='*', metavar='STRING',
-                        help="Play one random station matching string")
-    parser.add_argument('-R', '--random-stations', nargs='*', metavar='STRING',
+    parser.add_argument('-r', '--random', nargs='*',metavar='QUERY',
+                        help="Play one random station matching query")
+    parser.add_argument('-R', '--random-stations', nargs='*',metavar='QUERY',
                         dest='randomStations',
-                        help="Play one song each from random stations matching strings")
+                        help="Play one song each from random stations matching queries")
     parser.add_argument('-s', '--station', nargs='*', metavar='STATION',
                         help="A station name, partial station name, or station ID number")
     parser.add_argument('--sort', dest='sort', choices=['name', 'songs', 'id'],
