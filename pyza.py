@@ -12,17 +12,29 @@ import requests
 import subprocess
 import sys
 import time
+import demjson
+
 
 
 # ** Classes
 # *** Songza
 class Songza(object):
-    SONGZA_URL_PREFIX = 'https://songza.com'
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                        "Accept": "application/json, text/javascript, */*; q=0.01",
                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
                        + "10_8_3) AppleWebKit/537.36 (KHTML, like Gecko)"
                        + "Chrome/27.0.1453.93 Safari/537.36"}
+    SONGZA_URL_PREFIX = 'https://songza.com'
+
+    ACTIVITY_PATH ="/discover/activities/"
+    GENRE_PATH = "/discover/genres/"
+    MOOD_PATH = "/discover/moods/"
+    SEARCH_PATH = '/api/1/search/station'
+
+    CATEGORY_PATHS = {'activity': ACTIVITY_PATH,
+                        'genre': GENRE_PATH,
+                        'mood': MOOD_PATH}
+
     logger = logging.getLogger('pyza').getChild('Songza')
 
     @staticmethod
@@ -33,23 +45,74 @@ class Songza(object):
 
         return getattr(requests, method)(url, params=params,
                                            headers=Songza.REQUEST_HEADERS)
+
     @staticmethod
     def findStations(query):
-        '''Returns list of Station objects for query string.'''
+        '''Returns list of Stations for query string.'''
 
-        r = Songza.request("/api/1/search/station", params={'query': query})
+        category = None
+        
+        # Get activity/genre/mood from query
+        for prefix in Songza.CATEGORY_PATHS.keys():
+            prefixes = [prefix, prefix[0]]  # Single-letter abbreviations
 
-        stations = [Station(str(station['id']),
-                            station['name'],
-                            station['song_count'],
-                            station['description'])
-                    for station in r.json()]
+            for p in prefixes:
+                if "%s:" % p in query:
+                    category = prefixes[0]
+                    q = re.sub('^.*:', '', query)
+
+                    # Set the category in the query to the full
+                    # category string for clarity in output
+                    query = "%s:%s" % (category, q)
+
+        json = []
+        
+        # Category search
+        if category:
+            # Get the HTML for the category query
+            response = Songza.request(Songza.CATEGORY_PATHS[category] + q)
+
+            # If it returns an error page, it's probably a
+            # non-existent category
+            if response.ok:
+                # Decode the StationCache JSON object
+                json = Songza._decodeStationCache(response.text)
+
+        # Plain search
+        else:
+            json = Songza.request(Songza.SEARCH_PATH, params={'query': query}).json()
+
+        stations = [Station(str(station['id']), station['name'],
+                        station['song_count'], station['description'])
+                    for station in json]
 
         Songza.logger.debug('Found %s stations for query "%s": %s',
                             len(stations), query, [station for station in stations])
 
         return stations
 
+
+    @staticmethod
+    def _decodeStationCache(html):
+        """
+        Returns list of dicts of stations for Songza HTML.
+
+        In the Songza pages there is a JSON with all of the staton
+        info contained in Models.StationCache.set(.  We get all of the
+        data contained in the curly braces and convert it to a JSON
+        using demjson, becausePython's builtin JSON module is too
+        strict for this JSON's strucure.  The keys of the JSON are the
+        station IDs and the values are the dicts we'd get from the
+        API.  So we only return the values of the decoded JSON.
+
+        """
+
+        # TODO: Should we use BeautifulSoup for this?
+        start =  re.search('Models.StationCache.set\(', html).end()
+        html = html[start:]
+        end =  html.find('})') + 1
+        
+        return demjson.decode(html[:end]).values()
 
 
 class Track(object):
@@ -71,8 +134,11 @@ class Track(object):
 
 
 class Station(object):
-    def __init__(self, stationID, name=None, songCount=None, description=None):
+    
+    def __init__(self, stationID=None, name=None, songCount=None, description=None):
         self.log = logging.getLogger(self.__class__.__name__)
+
+        assert(stationID or name)
 
         self.id = stationID
         self.name = name.encode('utf8') if name else None
@@ -554,9 +620,9 @@ class VlcPlayer:
         return timeRemaining
 
 # ** Functions
-def printStations(stations):
-    # Print list of stations
-    print '%s stations found:' % len(stations)
+def printStations(stations, query):
+    print '%s stations found for query "%s":' % (len(stations),
+                                                 ' '.join([q for q in query]))
     for station in sorted(stations, key=lambda s: s.name):
         print station
 
@@ -564,22 +630,22 @@ def printStations(stations):
 def main():
 
     # **** Parse args
-    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.')
-    parser.add_argument('-e', '--exclude', nargs='*', metavar='STRING',
-                        help="Exclude stations matching strings")
-    parser.add_argument('-f', '--find', nargs='*', metavar='STRING',
-                        help="List stations matching strings")
+    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.  Queries may be plain queries which will match against station names and descriptions, or they may be in the form of {activity|a,genre|g,mood|m}:query to search for stations by activity, genre, or mood.  For example: "pyza -f reading" or "pyza -f genre:jazz" or "pyza -f mood:happy" ')
+    parser.add_argument('-e', '--exclude', nargs='*',metavar='QUERY',
+                        help="Exclude stations matching queries")
+    parser.add_argument('-f', '--find', nargs='*',metavar='QUERY',
+                        help="List stations matching queries")
     parser.add_argument('-n', '--names-only', action='store_true',
                         dest='namesOnly',
                         help="Only search station names, not station descriptions or other data")
     parser.add_argument('-m', '--mpd', nargs='?', metavar='HOST[:PORT]',
                         const='localhost:6600',
                         help="Play with MPD server.  Default: localhost:6600")
-    parser.add_argument('-r', '--random', nargs='*', metavar='STRING',
-                        help="Play one random station matching string")
-    parser.add_argument('-R', '--random-stations', nargs='*', metavar='STRING',
+    parser.add_argument('-r', '--random', nargs='*',metavar='QUERY',
+                        help="Play one random station matching query")
+    parser.add_argument('-R', '--random-stations', nargs='*',metavar='QUERY',
                         dest='randomStations',
-                        help="Play one song each from random stations matching strings")
+                        help="Play one song each from random stations matching queries")
     parser.add_argument('-s', '--station', nargs='*', metavar='STATION',
                         help="A station name, partial station name, or station ID number")
     parser.add_argument('--sort', dest='sort', choices=['name', 'songs', 'id'],
@@ -695,7 +761,7 @@ def main():
         # ***** List or play stations
         if args.find:
             # ****** List stations
-            printStations(stationMatches)
+            printStations(stationMatches, queries)
             return True
 
         else:
@@ -759,7 +825,7 @@ def main():
 
                 else:
                     # Just list stations
-                    printStations(stationMatches)
+                    printStations(stationMatches, queries)
                     return False
 
 # ** __main__
