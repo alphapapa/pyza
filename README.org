@@ -10,28 +10,32 @@
 It's pretty self-explanatory:
 
 #+BEGIN_SRC
-usage: pyza.py [-h] [-e [STRING [STRING ...]]] [-f [STRING [STRING ...]]] [-n]
-               [-m [HOST[:PORT]]] [-r [STRING [STRING ...]]]
-               [-R [STRING [STRING ...]]] [-s [STATION [STATION ...]]]
+usage: pyza.py [-h] [-e [QUERY [QUERY ...]]] [-f [QUERY [QUERY ...]]] [-n]
+               [-m [HOST[:PORT]]] [-r [QUERY [QUERY ...]]]
+               [-R [QUERY [QUERY ...]]] [-s [STATION [STATION ...]]]
                [--sort {name,songs,id}] [-v]
 
-A terminal-based Songza client.  Plays with VLC by default.
+A terminal-based Songza client. Plays with VLC by default. Queries may be
+plain queries which will match against station names and descriptions, or they
+may be in the form of {activity|a,genre|g,mood|m}:query to search for stations
+by activity, genre, or mood. For example: "pyza -f reading" or "pyza -f
+genre:jazz" or "pyza -f mood:happy"
 
 optional arguments:
   -h, --help            show this help message and exit
-  -e [STRING [STRING ...]], --exclude [STRING [STRING ...]]
-                        Exclude stations matching strings
-  -f [STRING [STRING ...]], --find [STRING [STRING ...]]
-                        List stations matching strings
+  -e [QUERY [QUERY ...]], --exclude [QUERY [QUERY ...]]
+                        Exclude stations matching queries
+  -f [QUERY [QUERY ...]], --find [QUERY [QUERY ...]]
+                        List stations matching queries
   -n, --names-only      Only search station names, not station descriptions or
                         other data
   -m [HOST[:PORT]], --mpd [HOST[:PORT]]
                         Play with MPD server. Default: localhost:6600
-  -r [STRING [STRING ...]], --random [STRING [STRING ...]]
-                        Play one random station matching string
-  -R [STRING [STRING ...]], --random-stations [STRING [STRING ...]]
+  -r [QUERY [QUERY ...]], --random [QUERY [QUERY ...]]
+                        Play one random station matching query
+  -R [QUERY [QUERY ...]], --random-stations [QUERY [QUERY ...]]
                         Play one song each from random stations matching
-                        strings
+                        queries
   -s [STATION [STATION ...]], --station [STATION [STATION ...]]
                         A station name, partial station name, or station ID
                         number
