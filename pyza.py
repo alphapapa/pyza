@@ -12,6 +12,8 @@ import requests
 import subprocess
 import sys
 import time
+import demjson
+
 
 
 # ** Classes
@@ -23,6 +25,11 @@ class Songza(object):
                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
                        + "10_8_3) AppleWebKit/537.36 (KHTML, like Gecko)"
                        + "Chrome/27.0.1453.93 Safari/537.36"}
+    moodPrefix = SONGZA_URL_PREFIX+ "/discover/moods/{}"
+    genrePrefix = SONGZA_URL_PREFIX+"/discover/genres/{}"
+    activityPrefix = SONGZA_URL_PREFIX+"/discover/activities/{}"
+    CATEGORY_PREFIXS = {'mood':moodPrefix, 'activity':activityPrefix, 'genre':genrePrefix}
+
     logger = logging.getLogger('pyza').getChild('Songza')
 
     @staticmethod
@@ -33,22 +40,73 @@ class Songza(object):
 
         return getattr(requests, method)(url, params=params,
                                            headers=Songza.REQUEST_HEADERS)
+
     @staticmethod
-    def findStations(query):
-        '''Returns list of Station objects for query string.'''
+    def jsonToStations(inputJson):
+        """
+        Takes a json of station data and returns a list of station objs
+        """
+        return [Station(str(station['id']), station['name'],station['song_count'],station['description'])
+                for station in inputJson]
 
+
+    @staticmethod
+    def categorySearch(query, category):
+        """
+        Finds the stations available of the Songza category by exploiting the StationCache json located in the Songza html.
+        This will get the category songza page and get return the StationCache contained in the html page. If the page returns an eror page it is most likley due
+        to trying to find a category that Songza does not have. So we return an empty list emulating a search that yields no results
+        """
+        assert category in ['mood','genre','category'], 'Category must be mood, activity or genre'
+        songzaPage = requests.get(Songza.CATEGORY_PREFIXS[category].format(query))
+        if not songzaPage.ok:
+            return []
+        else:
+            return Songza.getStationCache(songzaPage.text).values()
+
+    @staticmethod
+    def stationsSearch(query):
+        """
+        Returns the json of station data for a query string.
+        """
         r = Songza.request("/api/1/search/station", params={'query': query})
+        return r.json()
 
-        stations = [Station(str(station['id']),
-                            station['name'],
-                            station['song_count'],
-                            station['description'])
-                    for station in r.json()]
 
-        Songza.logger.debug('Found %s stations for query "%s": %s',
-                            len(stations), query, [station for station in stations])
+
+    @staticmethod
+    def findStations(query, category=None):
+        '''
+        Returns a list of Stations for the query string and category. If no category is given searches for stations using stationsSearch,
+        if a category is given uses categorySearch.
+        '''
+
+        if category:
+            stationsJson = Songza.categorySearch(query, category)
+        else:
+            stationsJson = Songza.stationsSearch(query)
+
+        stations = Songza.jsonToStations(stationsJson)
+
+        Songza.logger.debug('Found %s stations for query "%s" and category "%s": %s',
+                            len(stations), query, category, [station for station in stations])
 
         return stations
+
+
+    @staticmethod
+    def getStationCache(songzaPage):
+        """
+        In the Songza pages there is a json with all of the staton info contained in Models.StationCache.set(.
+        We get all of the data contained in the curly braces and convert it to a json using demjson as python's builtin json is too strict for this json's strucure.
+        The keys of the json are the station ids and the values are the dicts we'd get from the api. So we only return the values of the decoded json.
+        """
+        jsonStart =  re.search('Models.StationCache.set\(', songzaPage).end()
+        songzaPage = songzaPage[jsonStart:]
+        jsonEnd =  songzaPage.find('})')+1
+        return demjson.decode(songzaPage[:jsonEnd])
+
+
 
 
 
@@ -71,8 +129,11 @@ class Track(object):
 
 
 class Station(object):
-    def __init__(self, stationID, name=None, songCount=None, description=None):
+    
+    def __init__(self, stationID=None, name=None, songCount=None, description=None):
         self.log = logging.getLogger(self.__class__.__name__)
+
+        assert(stationID or name)
 
         self.id = stationID
         self.name = name.encode('utf8') if name else None
