@@ -21,8 +21,8 @@ usage: pyza.py [-h]
 A terminal-based Songza client. Plays with VLC by default. Queries may be
 plain queries which will match against station names and descriptions, or they
 may be in the form of {activity|a,genre|g,mood|m}:query to search for stations
-by activity, genre, or mood. For example: "pyza -f reading" or "pyza -f
-genre:jazz" or "pyza -f mood:happy"
+by activity, genre, or mood. For example: "pyza -f reading" or "pyza -f genre:jazz"
+or "pyza -f m:happy"
 
 optional arguments:
   -h, --help            show this help message and exit

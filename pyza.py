@@ -673,7 +673,7 @@ def printStations(stations, query):
 def main():
 
     # **** Parse args
-    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.  Queries may be plain queries which will match against station names and descriptions, or they may be in the form of {activity|a,genre|g,mood|m}:query to search for stations by activity, genre, or mood.  For example: "pyza -f reading" or "pyza -f genre:jazz" or "pyza -f mood:happy" ')
+    parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.  Queries may be plain queries which will match against station names and descriptions, or they may be in the form of {activity|a,genre|g,mood|m}:query to search for stations by activity, genre, or mood.  For example: "pyza -f reading" or "pyza -f genre:jazz" or "pyza -f m:happy"')
     parser.add_argument('-l', '--list-categories',
                         dest='listCategories', nargs='*',
                         choices=Songza.CATEGORIES.keys(),
