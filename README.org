@@ -5,12 +5,15 @@
 + Python 2.7+ (it might work on 2.6...)
 + VLC or MPD
 + MPD support requires =python-mpd= >= version 0.5.4.  This is from the forked version known as =python-mpd2=, which may not be packaged in your distro yet.  You can install it with =pip=.
++ [[http://deron.meranda.us/python/demjson/][python-demjson]] It's packaged in Debian/Ubuntu, or you can install with =pip install demjson=.
   
 ** Usage
 It's pretty self-explanatory:
 
 #+BEGIN_SRC
-usage: pyza.py [-h] [-e [QUERY [QUERY ...]]] [-f [QUERY [QUERY ...]]] [-n]
+usage: pyza.py [-h]
+               [-l [{activities,genres,moods} [{activities,genres,moods} ...]]]
+               [-e [QUERY [QUERY ...]]] [-f [QUERY [QUERY ...]]] [-n]
                [-m [HOST[:PORT]]] [-r [QUERY [QUERY ...]]]
                [-R [QUERY [QUERY ...]]] [-s [STATION [STATION ...]]]
                [--sort {name,songs,id}] [-v]
@@ -23,6 +26,8 @@ genre:jazz" or "pyza -f mood:happy"
 
 optional arguments:
   -h, --help            show this help message and exit
+  -l [{activities,genres,moods} [{activities,genres,moods} ...]], --list-categories [{activities,genres,moods} [{activities,genres,moods} ...]]
+                        Display list of available categories
   -e [QUERY [QUERY ...]], --exclude [QUERY [QUERY ...]]
                         Exclude stations matching queries
   -f [QUERY [QUERY ...]], --find [QUERY [QUERY ...]]

@@ -14,7 +14,8 @@ import sys
 import time
 import demjson
 
-
+from bs4 import BeautifulSoup
+from collections import namedtuple
 
 # ** Classes
 # *** Songza
@@ -31,9 +32,11 @@ class Songza(object):
     MOOD_PATH = "/discover/moods/"
     SEARCH_PATH = '/api/1/search/station'
 
-    CATEGORY_PATHS = {'activity': ACTIVITY_PATH,
-                        'genre': GENRE_PATH,
-                        'mood': MOOD_PATH}
+    Category = namedtuple('category', 'singular plural path')
+
+    CATEGORIES = {'activities': Category('activity', 'activities', ACTIVITY_PATH),
+                  'genres': Category('genre', 'genres', GENRE_PATH),
+                  'moods': Category('mood', 'moods', MOOD_PATH)}
 
     logger = logging.getLogger('pyza').getChild('Songza')
 
@@ -51,26 +54,30 @@ class Songza(object):
         '''Returns list of Stations for query string.'''
 
         category = None
-        
+
         # Get activity/genre/mood from query
-        for prefix in Songza.CATEGORY_PATHS.keys():
-            prefixes = [prefix, prefix[0]]  # Single-letter abbreviations
+        for categoryType, c in Songza.CATEGORIES.iteritems():
+            prefixes = [c.singular, c.singular[0]]  # Single-letter abbreviations
 
             for p in prefixes:
                 if "%s:" % p in query:
-                    category = prefixes[0]
+                    category = c
+                    
+                    # Get the query part
                     q = re.sub('^.*:', '', query)
 
                     # Set the category in the query to the full
                     # category string for clarity in output
-                    query = "%s:%s" % (category, q)
+                    query = "%s:%s" % (c.singular, q)
+
+                    break
 
         json = []
-        
+
         # Category search
         if category:
             # Get the HTML for the category query
-            response = Songza.request(Songza.CATEGORY_PATHS[category] + q)
+            response = Songza.request(category.path + q)
 
             # If it returns an error page, it's probably a
             # non-existent category
@@ -93,6 +100,36 @@ class Songza(object):
 
 
     @staticmethod
+    def getCategory(category):
+        '''Returns list of categories for a category type (activities, moods, or genres).'''
+
+        category = Songza.CATEGORIES[category]
+        response = Songza.request(category.path).text
+
+        return Songza._decodeCategory(response, category)
+
+    @staticmethod
+    def _decodeCategory(html, category):
+        '''Returns list of categories (activities, genres, moods) for a given
+        Songza /discover/ page's HTML.'''
+
+        soup = BeautifulSoup(html)
+        raw = soup.findAll('script', text=re.compile('tag: "%s"' % category.plural))[0].text
+
+        # Narrow down the raw <script... element
+        start = re.search('App.getInstance\(\).trigger\("nav-keep-open-subnav", {', raw).end()
+        raw = raw[start-1:]
+        end = re.search('\n\s*}\);\s*\n', raw).start()
+
+        # Just add the brace at the end. Easier than fiddling with the
+        # end of the raw string.
+        json = demjson.decode(raw[:end] + '}')
+
+        categories = [c['slug'] for c in json['galleries']]
+
+        return categories
+
+    @staticmethod
     def _decodeStationCache(html):
         """
         Returns list of dicts of stations for Songza HTML.
@@ -111,7 +148,7 @@ class Songza(object):
         start =  re.search('Models.StationCache.set\(', html).end()
         html = html[start:]
         end =  html.find('})') + 1
-        
+
         return demjson.decode(html[:end]).values()
 
 
@@ -134,7 +171,7 @@ class Track(object):
 
 
 class Station(object):
-    
+
     def __init__(self, stationID=None, name=None, songCount=None, description=None):
         self.log = logging.getLogger(self.__class__.__name__)
 
@@ -631,6 +668,10 @@ def main():
 
     # **** Parse args
     parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.  Queries may be plain queries which will match against station names and descriptions, or they may be in the form of {activity|a,genre|g,mood|m}:query to search for stations by activity, genre, or mood.  For example: "pyza -f reading" or "pyza -f genre:jazz" or "pyza -f mood:happy" ')
+    parser.add_argument('-l', '--list-categories',
+                        dest='listCategories', nargs='*',
+                        choices=Songza.CATEGORIES.keys(),
+                        help="Display list of available categories")
     parser.add_argument('-e', '--exclude', nargs='*',metavar='QUERY',
                         help="Exclude stations matching queries")
     parser.add_argument('-f', '--find', nargs='*',metavar='QUERY',
@@ -673,7 +714,7 @@ def main():
     log.debug("Args: %s", args)
 
     # **** Check args
-    if not (args.find or args.station or args.random or args.randomStations):
+    if not (args.find or args.station or args.random or args.randomStations) and args.listCategories is None:
         log.error('Please provide a station or search string.')
         parser.print_help()
         return False
@@ -685,6 +726,38 @@ def main():
     if args.random and args.randomStations:
         log.error('Please use either -r or -R but not both.')
         return False
+
+    # **** List categories
+    if args.listCategories is not None:
+
+        # TODO: Calculate number of columns that can fit in available
+        # term width
+
+        # If none given, use all
+        if not args.listCategories or args.listCategories == ['all']:
+            args.listCategories = Songza.CATEGORIES
+
+        categories = {category: Songza.getCategory(category) for category in args.listCategories}
+
+        if categories:
+            for k, v in categories.iteritems():
+                colHeight = len(v) / 3
+                print "%s %s:" % (len(v), k)
+
+                # Print in columns: http://stackoverflow.com/a/1524225
+                print "\n".join("%-40s %-40s %s" %
+                                (v[i],
+                                 v[i + colHeight],
+                                 v[i + colHeight * 2])
+                                for i in range(colHeight))
+                print  # blank line
+
+            return True
+
+        else:
+            log.error("No categories found?  Oops...")
+
+            return False
 
     # **** Handle sort arg
     sortReverse = False
