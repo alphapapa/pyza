@@ -20,6 +20,12 @@ from textwrap import fill
 
 # ** Classes
 # *** Songza
+
+class Category(namedtuple('category', 'singular plural')):
+    @property
+    def path(self):
+        return Songza.DISCOVER_PATH % self.plural        
+        
 class Songza(object):
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                        "Accept": "application/json, text/javascript, */*; q=0.01",
@@ -28,18 +34,13 @@ class Songza(object):
                        + "Chrome/27.0.1453.93 Safari/537.36"}
     SONGZA_URL_PREFIX = 'https://songza.com'
 
-    ACTIVITY_PATH ="/discover/activities/"
-    DECADES_PATH = "/discover/decades/"
-    GENRE_PATH = "/discover/genres/"
-    MOOD_PATH = "/discover/moods/"
+    DISCOVER_PATH = '/discover/%s/'
     SEARCH_PATH = '/api/1/search/station'
 
-    Category = namedtuple('category', 'singular plural path')
-
-    CATEGORIES = {'activities': Category('activity', 'activities', ACTIVITY_PATH),
-                  'decades': Category('decade', 'decades', DECADES_PATH),
-                  'genres': Category('genre', 'genres', GENRE_PATH),
-                  'moods': Category('mood', 'moods', MOOD_PATH)}
+    CATEGORIES = {'activities': Category('activity', 'activities'),
+                  'decades': Category('decade', 'decades'),
+                  'genres': Category('genre', 'genres'),
+                  'moods': Category('mood', 'moods')}
 
     logger = logging.getLogger('pyza').getChild('Songza')
 
@@ -101,7 +102,6 @@ class Songza(object):
 
         return stations
 
-
     @staticmethod
     def getCategory(category):
         '''Returns list of categories for a category type (activities, moods, or genres).'''
@@ -157,7 +157,8 @@ class Songza(object):
 
         return demjson.decode(html[:end]).values()
 
-
+    
+    
 class Track(object):
     def __init__(self, url, data):
         self.url = url
