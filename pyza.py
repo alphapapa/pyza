@@ -664,22 +664,35 @@ class VlcPlayer:
         return timeRemaining
 
 # ** Functions
-def printStations(stations, query):
+def printStations(stations, query, descriptions=False):
+    def formatStation(station):
+        return "{2:>{0}}: {3:{1}}".format(
+            stationIDwidth + 4 + 11, stationNameWidth, "ID:" + station.id  + " (%s songs)" % station.songCount, station.name)
+
     stationIDwidth = max([len(station.id) for station in stations])
 
     print '%s stations found for query "%s":' % (len(stations),
                                                  ' '.join([q for q in query]))
 
-    for station in sorted(stations, key=lambda s: s.name):
-        s = fill("{0:>{1}}: {2} ({3} songs): {4}".format(station.id,
-                                                         stationIDwidth,
-                                                         station.name,
-                                                         station.songCount,
-                                                         station.description),
-                 subsequent_indent=' ' * (stationIDwidth + 2))
-        print s
+    if descriptions:
+        for station in sorted(stations, key=lambda s: s.name):
+            s = fill("{0:>{1}}: {2} ({3} songs): {4}".format(station.id,
+                                                             stationIDwidth,
+                                                             station.name,
+                                                             station.songCount,
+                                                             station.description),
+                     subsequent_indent=' ' * (stationIDwidth + 2))
+            print s
 
+    else:
+        colHeight = len(stations) / 3
+        stationIDwidth = max(len(station.id) for station in stations)
+        stationNameWidth = max((len(station.name) for station in stations))
 
+        for i in range(colHeight):
+            print "{1:{0}}  {2:{0}}  {3:{0}}".format(
+                20,
+                formatStation(stations[i]), formatStation(stations[i+colHeight]), formatStation(stations[i+colHeight*2]))
 def main():
 
     # **** Parse args
@@ -692,6 +705,9 @@ def main():
                         help="Exclude stations matching queries")
     parser.add_argument('-f', '--find', nargs='*',metavar='QUERY',
                         help="List stations matching queries")
+    parser.add_argument('-d', '--descriptions', action='store_true',
+                        dest='printDescriptions',
+                        help="Show station descriptions")
     parser.add_argument('-n', '--names-only', action='store_true',
                         dest='namesOnly',
                         help="Only search station names, not station descriptions or other data")
@@ -850,7 +866,7 @@ def main():
         # ***** List or play stations
         if args.find:
             # ****** List stations
-            printStations(stationMatches, queries)
+            printStations(stationMatches, queries, args.printDescriptions)
             return True
 
         else:
@@ -914,7 +930,7 @@ def main():
 
                 else:
                     # Just list stations
-                    printStations(stationMatches, queries)
+                    printStations(stationMatches, queries, args.printDescriptions)
                     return False
 
 # ** __main__
