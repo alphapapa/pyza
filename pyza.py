@@ -29,6 +29,7 @@ class Songza(object):
     SONGZA_URL_PREFIX = 'https://songza.com'
 
     ACTIVITY_PATH ="/discover/activities/"
+    DECADES_PATH = "/discover/decades/"
     GENRE_PATH = "/discover/genres/"
     MOOD_PATH = "/discover/moods/"
     SEARCH_PATH = '/api/1/search/station'
@@ -36,6 +37,7 @@ class Songza(object):
     Category = namedtuple('category', 'singular plural path')
 
     CATEGORIES = {'activities': Category('activity', 'activities', ACTIVITY_PATH),
+                  'decades': Category('decade', 'decades', DECADES_PATH),
                   'genres': Category('genre', 'genres', GENRE_PATH),
                   'moods': Category('mood', 'moods', MOOD_PATH)}
 
