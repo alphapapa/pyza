@@ -24,8 +24,8 @@ from textwrap import fill
 class Category(namedtuple('category', 'singular plural')):
     @property
     def path(self):
-        return Songza.DISCOVER_PATH % self.plural        
-        
+        return Songza.DISCOVER_PATH % self.plural
+
 class Songza(object):
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                        "Accept": "application/json, text/javascript, */*; q=0.01",
@@ -157,8 +157,8 @@ class Songza(object):
 
         return demjson.decode(html[:end]).values()
 
-    
-    
+
+
 class Track(object):
     def __init__(self, url, data):
         self.url = url
