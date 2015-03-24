@@ -57,7 +57,12 @@ optional arguments:
 
 ** TODOs
 + Use signals or something to allow skipping tracks and voting.
-+ Allow searching by mood, concierge, or some of the other things Songza has.
++ Somehow provide access to the Songza concierge service?
++ +Allow searching by activity, genre, or mood.+
+
+** Credits
++ Thanks to [[https://github.com/TannerBaldus][TannerBaldus]] for writing most of the code for querying activities, genres, and moods.
++ Thanks to robu3 for creating [[https://github.com/robu3/mixzatape][MixZaTape]], which inspired =pyza=.
   
 ** License
 GPLv2
