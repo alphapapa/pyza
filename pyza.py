@@ -122,6 +122,9 @@ class Songza(object):
         raw = raw[start-1:]
         end = re.search('\n\s*}\);\s*\n', raw).start()
 
+        # TODO: Try to use the built-in Python json module instead of
+        # demjson.  Would make for one less dependency.
+
         # Just add the brace at the end. Easier than fiddling with the
         # end of the raw string.
         json = demjson.decode(raw[:end] + '}')
