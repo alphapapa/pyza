@@ -37,7 +37,7 @@ class Songza(object):
     DISCOVER_PATH = '/discover/%s/'
     SEARCH_PATH = '/api/1/search/station'
 
-    CATEGORIES = {'activities': Category('activity', 'activities'),
+    CATEGORY_TYPES = {'activities': Category('activity', 'activities'),
                   'decades': Category('decade', 'decades'),
                   'genres': Category('genre', 'genres'),
                   'moods': Category('mood', 'moods')}
@@ -60,7 +60,7 @@ class Songza(object):
         category = None
 
         # Get activity/genre/mood from query
-        for categoryType, c in Songza.CATEGORIES.iteritems():
+        for categoryType, c in Songza.CATEGORY_TYPES.iteritems():
             prefixes = [c.singular, c.singular[0]]  # Single-letter abbreviations
 
             for p in prefixes:
@@ -103,13 +103,13 @@ class Songza(object):
         return stations
 
     @staticmethod
-    def getCategory(category):
+    def getCategoryType(categoryType):
         '''Returns list of categories for a category type (activities, moods, or genres).'''
 
-        category = Songza.CATEGORIES[category]
-        response = Songza.request(category.path).text
+        categoryType = Songza.CATEGORY_TYPES[categoryType]
+        html = Songza.request(categoryType.path).text
 
-        return Songza._decodeCategory(response, category)
+        return Songza._decodeCategory(html, categoryType)
 
     @staticmethod
     def _decodeCategory(html, category):
@@ -686,7 +686,7 @@ def main():
     parser = argparse.ArgumentParser(description='A terminal-based Songza client.  Plays with VLC by default.  Queries may be plain queries which will match against station names and descriptions, or they may be in the form of {activity|a,genre|g,mood|m}:query to search for stations by activity, genre, or mood.  For example: "pyza -f reading" or "pyza -f genre:jazz" or "pyza -f m:happy"')
     parser.add_argument('-l', '--list-categories',
                         dest='listCategories', nargs='*',
-                        choices=Songza.CATEGORIES.keys(),
+                        choices=Songza.CATEGORY_TYPES.keys(),
                         help="Display list of available categories")
     parser.add_argument('-e', '--exclude', nargs='*',metavar='QUERY',
                         help="Exclude stations matching queries")
@@ -751,9 +751,9 @@ def main():
 
         # If none given, use all
         if not args.listCategories or args.listCategories == ['all']:
-            args.listCategories = Songza.CATEGORIES
+            args.listCategories = Songza.CATEGORY_TYPES
 
-        categories = {category: Songza.getCategory(category) for category in args.listCategories}
+        categories = {categoryType: Songza.getCategoryType(categoryType) for categoryType in args.listCategories}
 
         if categories:
             for k, v in categories.iteritems():
