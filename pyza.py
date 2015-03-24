@@ -16,6 +16,7 @@ import demjson
 
 from bs4 import BeautifulSoup
 from collections import namedtuple
+from textwrap import fill
 
 # ** Classes
 # *** Songza
@@ -62,7 +63,7 @@ class Songza(object):
             for p in prefixes:
                 if "%s:" % p in query:
                     category = c
-                    
+
                     # Get the query part
                     q = re.sub('^.*:', '', query)
 
@@ -658,10 +659,15 @@ class VlcPlayer:
 
 # ** Functions
 def printStations(stations, query):
-    print '%s stations found for query "%s":' % (len(stations),
-                                                 ' '.join([q for q in query]))
+    stationIDwidth = max([len(station.id) for station in stations])
+
+    print '%s stations found for query "%s":' % (len(stations), ' '.join([q for q in query]))
+
     for station in sorted(stations, key=lambda s: s.name):
-        print station
+        s = fill("{0:>{1}}: {2}: {3}".format(station.id,
+                                             stationIDwidth, station.name, station.description),
+                 subsequent_indent=' ' * (stationIDwidth + 2))
+        print s
 
 
 def main():
