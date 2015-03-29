@@ -28,6 +28,14 @@ class Songza(object):
         def path(self):
             return Songza.DISCOVER_PATH % self.plural
 
+    class Genre(namedtuple('genre', 'name aliases')):
+        def __eq__(self, val):
+            return any(val == name
+                       for name in [self.name] + self.aliases)
+
+    GENRE_ALIASES = [Genre('classical_opera', ['classical',
+                                               'classical/opera', 'opera'])]
+
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                        "Accept": "application/json, text/javascript, */*; q=0.01",
                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
@@ -45,8 +53,6 @@ class Songza(object):
 
     logger = logging.getLogger('pyza').getChild('Songza')
 
-
-
     @staticmethod
     def request(path, params=None, method='get'):
         '''Returns a requests result for a request.'''
@@ -62,20 +68,18 @@ class Songza(object):
 
         category = None
 
-        # Get activity/genre/mood from query
-        for categoryType, c in Songza.CATEGORY_TYPES.iteritems():
-            prefixes = [c.singular, c.singular[0]]  # Single-letter abbreviations
+        # Get category type from query string
+        for ct, c in Songza.CATEGORY_TYPES.iteritems():
 
-            for p in prefixes:
-                if "%s:" % p in query:
-                    category = c
+            # [Full name, single-letter abbreviation]
+            categorySpecifiers = [c.singular, c.singular[0]]
 
-                    # Get the query part
-                    q = re.sub('^.*:', '', query)
+            for cs in categorySpecifiers :
+                if re.search("^%s:" % cs, query):
+                    categoryType = c
 
-                    # Set the category in the query to the full
-                    # category string for clarity in output
-                    query = "%s:%s" % (c.singular, q)
+                    # Get the query part (i.e. 'jazz' for 'g:jazz')
+                    category = re.sub('^.*:', '', query)
 
                     break
 
@@ -83,8 +87,16 @@ class Songza(object):
 
         # Category search
         if category:
+
+            # Look up proper genre for aliases (e.g. 'classical_opera'
+            # for 'classical')
+            if categoryType.singular == 'genre':
+                properCategory = [genre.name for genre in Songza.GENRE_ALIASES
+                                  if category == genre] or None
+                category = properCategory[0] if properCategory else category
+
             # Get the HTML for the category query
-            response = Songza.request(category.path + q)
+            response = Songza.request(categoryType.path + category + '/')  # Avoid redirect by adding trailing slash
 
             # If it returns an error page, it's probably a
             # non-existent category
@@ -805,6 +817,16 @@ def main():
                                  v[i + colHeight * 2])
                                 for i in range(colHeight))
                 print  # blank line
+
+            # Print genre aliases
+            if any(ct in args.listCategories for ct in ['genres', 'all']):
+                print "You may also use these aliases when searching by genre:"
+                for genre in Songza.GENRE_ALIASES:
+                    print "%s: %s" % (genre.name,
+                                      ', '.join([alias
+                                                 for ga in Songza.GENRE_ALIASES
+                                                 for alias in ga.aliases
+                                                 if genre.name == ga]))
 
             return True
 
