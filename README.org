@@ -3,6 +3,7 @@
 
 ** Requirements
 + Python 2.7+ (it might work on 2.6...)
++ BeautifulSoup4, packaged for Debian/Ubuntu as =python-bs4=.
 + VLC or MPD
 + MPD support requires =python-mpd= >= version 0.5.4.  This is from the forked version known as =python-mpd2=, which may not be packaged in your distro yet.  You can install it with =pip=.
 
