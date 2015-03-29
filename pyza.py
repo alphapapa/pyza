@@ -5,6 +5,7 @@
 
 # ** Imports
 import argparse
+import demjson
 import logging
 import random
 import re
@@ -12,7 +13,6 @@ import requests
 import subprocess
 import sys
 import time
-import demjson
 
 from bs4 import BeautifulSoup
 from collections import namedtuple
@@ -32,15 +32,15 @@ class Songza(object):
                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
                        + "10_8_3) AppleWebKit/537.36 (KHTML, like Gecko)"
                        + "Chrome/27.0.1453.93 Safari/537.36"}
-    SONGZA_URL_PREFIX = 'https://songza.com'
 
+    SONGZA_URL_PREFIX = 'https://songza.com'
     DISCOVER_PATH = '/discover/%s/'
     SEARCH_PATH = '/api/1/search/station'
 
     CATEGORY_TYPES = {'activities': Category('activity', 'activities'),
-                  'decades': Category('decade', 'decades'),
-                  'genres': Category('genre', 'genres'),
-                  'moods': Category('mood', 'moods')}
+                      'decades': Category('decade', 'decades'),
+                      'genres': Category('genre', 'genres'),
+                      'moods': Category('mood', 'moods')}
 
     logger = logging.getLogger('pyza').getChild('Songza')
 
@@ -51,7 +51,7 @@ class Songza(object):
         url = Songza.SONGZA_URL_PREFIX + path
 
         return getattr(requests, method)(url, params=params,
-                                           headers=Songza.REQUEST_HEADERS)
+                                         headers=Songza.REQUEST_HEADERS)
 
     @staticmethod
     def findStations(query):
@@ -91,14 +91,16 @@ class Songza(object):
 
         # Plain search
         else:
-            json = Songza.request(Songza.SEARCH_PATH, params={'query': query}).json()
+            json = Songza.request(Songza.SEARCH_PATH,
+                                  params={'query': query}).json()
 
         stations = [Station(str(station['id']), station['name'],
-                        station['song_count'], station['description'])
+                            station['song_count'], station['description'])
                     for station in json]
 
         Songza.logger.debug('Found %s stations for query "%s": %s',
-                            len(stations), query, [station for station in stations])
+                            len(stations), query, [station
+                                                   for station in stations])
 
         return stations
 
@@ -117,10 +119,12 @@ class Songza(object):
         Songza /discover/ page's HTML.'''
 
         soup = BeautifulSoup(html)
-        raw = soup.findAll('script', text=re.compile('tag: "%s"' % category.plural))[0].text
+        raw = soup.findAll('script', text=re.compile('tag: "%s"'
+                                                     % category.plural))[0].text
 
         # Narrow down the raw <script... element
-        start = re.search('App.getInstance\(\).trigger\("nav-keep-open-subnav", {', raw).end()
+        start = re.search(
+            'App.getInstance\(\).trigger\("nav-keep-open-subnav", {', raw).end()
         raw = raw[start-1:]
         end = re.search('\n\s*}\);\s*\n', raw).start()
 
@@ -147,7 +151,6 @@ class Songza(object):
         strict for this JSON's strucure.  The keys of the JSON are the
         station IDs and the values are the dicts we'd get from the
         API.  So we only return the values of the decoded JSON.
-
         """
 
         # TODO: Should we use BeautifulSoup for this?
@@ -172,7 +175,8 @@ class Track(object):
         self.file = None
 
     def __repr__(self):
-        return '%s: "%s" from "%s" (%s)' % (self.artist, self.title, self.album, self.genre)
+        return '%s: "%s" from "%s" (%s)' % (self.artist, self.title, self.album,
+                                            self.genre)
 
     __str__ = __repr__
 
@@ -238,8 +242,7 @@ class Station(object):
 
     def _vote(self, direction):
         result = Songza.request("/api/1/station/%s/song/%s/vote/%s" %
-                                (self.id, self.track.id, direction),
-                                method='post')
+                                self.id, self.track.id, direction, method='post')
 
         self.log.debug(result)
 
@@ -644,7 +647,7 @@ class VlcPlayer:
                 duration = int(match.group(1))
             else:
                 self.log.debug("Unable to parse duration: %s",
-                                  response)
+                               response)
 
             response = self._sendCommand("getTime", readline=True)
             match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
@@ -653,7 +656,7 @@ class VlcPlayer:
                 remaining = int(match.group(1))
             else:
                 self.log.debug("Unable to parse time remaining: %s",
-                                  response)
+                               response)
 
             if duration and remaining:
                 timeRemaining = duration - remaining
@@ -667,13 +670,13 @@ class VlcPlayer:
 def printStations(stations, query, descriptions=False, sort='name'):
 
     stationIDwidth = max([len(station.id) for station in stations])
-    
+
     # Sort list
     stations.sort(key=lambda s: getattr(s, sort))
-    
+
     if descriptions:
         # Print with descriptions
-        
+
         s = "\n".join(
             fill("{0:>{1}}: {2} ({3} songs): {4}".format(
                 station.id, stationIDwidth, station.name,
@@ -683,7 +686,7 @@ def printStations(stations, query, descriptions=False, sort='name'):
 
     else:
         # Print without descriptions
-        
+
         def formatStation(station):
             return "ID {0:>{1}}: {2:{3}}".format(
                 station.id, stationIDwidth,
@@ -701,7 +704,7 @@ def printStations(stations, query, descriptions=False, sort='name'):
                                   formatStation(stations[row+(colHeight*col)]))
                  for col in range(numColumns)))
             rows.append(r)
-        
+
         s = "\n".join(row for row in rows)
 
     print s
@@ -713,30 +716,38 @@ def main():
                         dest='listCategories', nargs='*',
                         choices=Songza.CATEGORY_TYPES.keys(),
                         help="Display list of available categories")
-    parser.add_argument('-e', '--exclude', nargs='*',metavar='QUERY',
+    parser.add_argument('-e', '--exclude',
+                        nargs='*',metavar='QUERY',
                         help="Exclude stations matching queries")
-    parser.add_argument('-f', '--find', nargs='*',metavar='QUERY',
+    parser.add_argument('-f', '--find',
+                        nargs='*',metavar='QUERY',
                         help="List stations matching queries")
-    parser.add_argument('-d', '--descriptions', action='store_true',
-                        dest='printDescriptions',
+    parser.add_argument('-d', '--descriptions',
+                        dest='printDescriptions', action='store_true',
                         help="Show station descriptions")
-    parser.add_argument('-n', '--names-only', action='store_true',
-                        dest='namesOnly',
+    parser.add_argument('-n', '--names-only',
+                        dest='namesOnly', action='store_true',
                         help="Only search station names, not station descriptions or other data")
-    parser.add_argument('-m', '--mpd', nargs='?', metavar='HOST[:PORT]',
+    parser.add_argument('-m', '--mpd',
+                        nargs='?', metavar='HOST[:PORT]',
                         const='localhost:6600',
                         help="Play with MPD server.  Default: localhost:6600")
-    parser.add_argument('-r', '--random', nargs='*',metavar='QUERY',
+    parser.add_argument('-r', '--random',
+                        nargs='*',metavar='QUERY',
                         help="Play one random station matching query")
-    parser.add_argument('-R', '--random-stations', nargs='*',metavar='QUERY',
+    parser.add_argument('-R', '--random-stations',
                         dest='randomStations',
+                        nargs='*',metavar='QUERY',
                         help="Play one song each from random stations matching queries")
-    parser.add_argument('-s', '--station', nargs='*', metavar='STATION',
+    parser.add_argument('-s', '--station',
+                        nargs='*', metavar='STATION',
                         help="A station name, partial station name, or station ID number")
-    parser.add_argument('--sort', dest='sort', choices=['name', 'songs', 'id'],
-                        default='songs',
+    parser.add_argument('--sort',
+                        choices=['name', 'songs', 'id'], default='songs',
                         help="Sort station list.  Default: number of songs")
-    parser.add_argument("-v", "--verbose", action="count", dest="verbose", help="Be verbose, up to -vv")
+    parser.add_argument("-v", "--verbose",
+                        action="count",
+                        help="Be verbose, up to -vv")
     args = parser.parse_args()
 
     # **** Setup logging
@@ -758,7 +769,8 @@ def main():
     log.debug("Args: %s", args)
 
     # **** Check args
-    if not (args.find or args.station or args.random or args.randomStations) and args.listCategories is None:
+    if (not (args.find or args.station or args.random or args.randomStations)
+        and args.listCategories is None):
         log.error('Please provide a station or search string.')
         parser.print_help()
         return False
@@ -781,7 +793,8 @@ def main():
         if not args.listCategories or args.listCategories == ['all']:
             args.listCategories = Songza.CATEGORY_TYPES
 
-        categories = {categoryType: Songza.getCategoryType(categoryType) for categoryType in args.listCategories}
+        categories = {categoryType: Songza.getCategoryType(categoryType)
+                      for categoryType in args.listCategories}
 
         if categories:
             for k, v in categories.iteritems():
@@ -855,12 +868,14 @@ def main():
             stationMatches = [station
                               for station in stationMatches
                               if not any(e.lower() in s
-                                         for s in [station.name.lower(), station.description.lower()]
+                                         for s in [station.name.lower(),
+                                                   station.description.lower()]
                                          for e in args.exclude)]
             countAfter = len(stationMatches)
 
             log.debug('Excluded %s stations.  Stations remaining: %s',
-                      countBefore - countAfter, [station.name for station in stationMatches])
+                      countBefore - countAfter, [station.name
+                                                 for station in stationMatches])
 
         # Remove dupes
         stationMatches = set(stationMatches)
@@ -878,7 +893,8 @@ def main():
         # ***** List or play stations
         if args.find:
             # ****** List stations
-            printStations(stationMatches, queries, args.printDescriptions, sort=sortBy)
+            printStations(stationMatches, queries, args.printDescriptions,
+                          sort=sortBy)
             return True
 
         else:
@@ -906,7 +922,8 @@ def main():
                 try:
                     player = MPD(host, port, excludes=args.exclude, logger=log)
                 except Exception as e:
-                    log.critical("Couldn't connect to MPD server: %s:%s: %s", host, port, e)
+                    log.critical("Couldn't connect to MPD server: %s:%s: %s",
+                                 host, port, e)
                     return False
                 else:
                     log.debug('Connected to MPD server: %s', host)
@@ -942,7 +959,8 @@ def main():
 
                 else:
                     # Just list stations
-                    printStations(stationMatches, queries, args.printDescriptions, sort=sortBy)
+                    printStations(stationMatches, queries,
+                                  args.printDescriptions, sort=sortBy)
                     return False
 
 # ** __main__
