@@ -21,12 +21,13 @@ from textwrap import fill
 # ** Classes
 # *** Songza
 
-class Category(namedtuple('category', 'singular plural')):
-    @property
-    def path(self):
-        return Songza.DISCOVER_PATH % self.plural
-
 class Songza(object):
+
+    class Category(namedtuple('category', 'singular plural')):
+        @property
+        def path(self):
+            return Songza.DISCOVER_PATH % self.plural
+
     REQUEST_HEADERS = {"Content-type": "application/x-www-form-urlencoded; charset=UTF-8",
                        "Accept": "application/json, text/javascript, */*; q=0.01",
                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X"
@@ -43,6 +44,8 @@ class Songza(object):
                       'moods': Category('mood', 'moods')}
 
     logger = logging.getLogger('pyza').getChild('Songza')
+
+
 
     @staticmethod
     def request(path, params=None, method='get'):
