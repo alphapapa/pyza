@@ -727,9 +727,10 @@ def formatStations(stations, query, descriptions=False, sort='name'):
 def main():
 
     # **** Parse args
-    parser = argparse.ArgumentParser(description="A terminal-based Songza client.  Plays with VLC by default, or with MPD.",
-                                     epilog="examples:\n  pyza -f movies\n  pyza -r mood:happy\n  pyza -R g:jazz g:classical -e christmas",
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="A terminal-based Songza client.  Plays with VLC by default, or with MPD.",
+        epilog="examples:\n  pyza -f movies\n  pyza -r mood:happy\n  pyza -R g:jazz g:classical -e christmas",
+        formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-l',
                         dest='listCategories', nargs='*',
                         choices=Songza.CATEGORY_TYPES.keys(),
