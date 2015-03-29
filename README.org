@@ -12,39 +12,40 @@ It's pretty self-explanatory:
 #+BEGIN_SRC
 usage: pyza [-h]
             [-l [{activities,genres,decades,moods} [{activities,genres,decades,moods} ...]]]
-            [-e [QUERY [QUERY ...]]] [-f] [-d] [-n] [-m [HOST[:PORT]]] [-r]
+            [-e [string [string ...]]] [-f] [-d] [-n] [-m [host[:port]]] [-r]
             [-R] [--sort {name,songs,id}] [-v]
-            [STATION/QUERY [STATION/QUERY ...]]
+            [STATION|QUERY [STATION|QUERY ...]]
 
-A terminal-based Songza client. Plays with VLC by default. Queries may be
-plain queries which will match against station names and descriptions, or they
-may be in the form of {activity|a,genre|g,mood|m}:query to search for stations
-by activity, genre, or mood. For example: "pyza -f reading" or "pyza -f
-genre:jazz" or "pyza -f m:happy"
+A terminal-based Songza client.  Plays with VLC by default, or with MPD.
 
 positional arguments:
-  STATION/QUERY         A station name, partial station name, or station ID
-                        number
+  STATION|QUERY         A station ID number, station name, partial station name, or category
+                        query like activity:driving, decade:1960s, genre:jazz, or mood:happy.
+                        You may abbreviate the category type like g:jazz, and you may use
+                        multiple queries which will be ORed together.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -l [{activities,genres,decades,moods} [{activities,genres,decades,moods} ...]], --list-categories [{activities,genres,decades,moods} [{activities,genres,decades,moods} ...]]
-                        Display list of available categories
-  -e [QUERY [QUERY ...]], --exclude [QUERY [QUERY ...]]
-                        Exclude stations matching queries
+  -l [{activities,genres,decades,moods} [{activities,genres,decades,moods} ...]]
+                        List available categories
+  -e [string [string ...]], --exclude [string [string ...]]
+                        Exclude stations whose names or descriptions match strings
   -f, --find            List stations matching queries
   -d, --descriptions    Show station descriptions
-  -n, --names-only      Only search station names, not station descriptions or
-                        other data
-  -m [HOST[:PORT]], --mpd [HOST[:PORT]]
-                        Play with MPD server. Default: localhost:6600
-  -r, --random          Play one random station matching query
+  -n, --names-only      Only search station names, not station descriptions or other data
+  -m [host[:port]], --mpd [host[:port]]
+                        Play with MPD server.  Default: localhost:6600
+  -r, --random          Play one random station from stations matching queries
   -R, --random-stations
-                        Play one song each from random stations matching
-                        queries
+                        Play one song each from random stations matching queries
   --sort {name,songs,id}
-                        Sort station list. Default: number of songs
+                        Sort station list (default: number of songs)
   -v, --verbose         Be verbose, up to -vv
+
+examples:
+  pyza -f movies
+  pyza -r mood:happy
+  pyza -R g:jazz g:classical -e christmas
 #+END_SRC
 ** Examples
 =pyza.py -R piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
