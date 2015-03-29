@@ -664,35 +664,47 @@ class VlcPlayer:
         return timeRemaining
 
 # ** Functions
-def printStations(stations, query, descriptions=False):
-    def formatStation(station):
-        return "{2:>{0}}: {3:{1}}".format(
-            stationIDwidth + 4 + 11, stationNameWidth, "ID:" + station.id  + " (%s songs)" % station.songCount, station.name)
+def printStations(stations, query, descriptions=False, sort='name'):
 
     stationIDwidth = max([len(station.id) for station in stations])
-
-    print '%s stations found for query "%s":' % (len(stations),
-                                                 ' '.join([q for q in query]))
-
+    
+    # Sort list
+    stations.sort(key=lambda s: getattr(s, sort))
+    
     if descriptions:
-        for station in sorted(stations, key=lambda s: s.name):
-            s = fill("{0:>{1}}: {2} ({3} songs): {4}".format(station.id,
-                                                             stationIDwidth,
-                                                             station.name,
-                                                             station.songCount,
-                                                             station.description),
-                     subsequent_indent=' ' * (stationIDwidth + 2))
-            print s
+        # Print with descriptions
+        
+        s = "\n".join(
+            fill("{0:>{1}}: {2} ({3} songs): {4}".format(
+                station.id, stationIDwidth, station.name,
+                station.songCount, station.description),
+                 subsequent_indent=' ' * (stationIDwidth + 2))
+            for station in stations)
 
     else:
-        colHeight = len(stations) / 3
-        stationIDwidth = max(len(station.id) for station in stations)
-        stationNameWidth = max((len(station.name) for station in stations))
+        # Print without descriptions
+        
+        def formatStation(station):
+            return "ID {0:>{1}}: {2:{3}}".format(
+                station.id, stationIDwidth,
+                "%s (%s songs)" % (station.name, station.songCount),
+                stationNameWidth + 1 + 11)
 
-        for i in range(colHeight):
-            print "{1:{0}}  {2:{0}}  {3:{0}}".format(
-                20,
-                formatStation(stations[i]), formatStation(stations[i+colHeight]), formatStation(stations[i+colHeight*2]))
+        stationNameWidth = max(len(station.name) for station in stations)
+        numColumns = 2
+        colHeight = len(stations) / numColumns
+
+        rows = []
+        for row in range(colHeight):
+            r = '  '.join(
+                ("{1:{0}}".format(3 + stationIDwidth + 1 + stationNameWidth + 1 + 11,  # e.g. "ID:12345 Station Name (123 songs)"
+                                  formatStation(stations[row+(colHeight*col)]))
+                 for col in range(numColumns)))
+            rows.append(r)
+        
+        s = "\n".join(row for row in rows)
+
+    print s
 def main():
 
     # **** Parse args
@@ -866,7 +878,7 @@ def main():
         # ***** List or play stations
         if args.find:
             # ****** List stations
-            printStations(stationMatches, queries, args.printDescriptions)
+            printStations(stationMatches, queries, args.printDescriptions, sort=sortBy)
             return True
 
         else:
@@ -930,7 +942,7 @@ def main():
 
                 else:
                     # Just list stations
-                    printStations(stationMatches, queries, args.printDescriptions)
+                    printStations(stationMatches, queries, args.printDescriptions, sort=sortBy)
                     return False
 
 # ** __main__
