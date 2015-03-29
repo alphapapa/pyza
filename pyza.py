@@ -498,27 +498,29 @@ class MPD(Player):
         # Loop waiting for track change
         while True:
 
-            # Wait for a change
-            self.mpd.idle()
+            # Wait for a track change (not e.g. a volume change)
+            subsystems = self.mpd.idle()
+            if 'player' in subsystems:
 
-            # Get player status info
-            self._status()
+                # Get player status info
+                self._status()
 
-            # Add the next song when the current song changes
-            if lastSongID != self.songID:
-                self.log.debug('Song changed.  Last song:%s  Current song:%s',
-                               lastSongID, self.songID)
+                # Add the next song when the current song changes
+                if lastSongID != self.songID:
+                    self.log.debug(
+                        'Song changed.  Last song:%s  Current song:%s',
+                        lastSongID, self.songID)
 
-                self.next()
-                lastSongID = self.songID
+                    self.next()
+                    lastSongID = self.songID
 
-                # Set the tags again, since they seem to get messed up
-                if ('artist' not in self.currentSong
-                    or self.currentSong['artist'] != self.track.artist):
+                    # Set the tags again, since they seem to get messed up
+                    if ('artist' not in self.currentSong
+                        or self.currentSong['artist'] != self.track.artist):
 
-                    self.log.debug('Tags disappeared.  Adding again...')
+                        self.log.debug('Tags disappeared.  Adding again...')
 
-                    self._addTags(self.songID, self.track)
+                        self._addTags(self.songID, self.track)
 
 
 class VLC(Player):
