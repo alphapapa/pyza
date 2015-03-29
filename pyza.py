@@ -666,7 +666,7 @@ class VlcPlayer:
         return timeRemaining
 
 # ** Functions
-def printStations(stations, query, descriptions=False, sort='name'):
+def formatStations(stations, query, descriptions=False, sort='name'):
 
     stationIDwidth = max([len(station.id) for station in stations])
 
@@ -698,15 +698,18 @@ def printStations(stations, query, descriptions=False, sort='name'):
 
         rows = []
         for row in range(colHeight):
-            r = '  '.join(
-                ("{1:{0}}".format(3 + stationIDwidth + 1 + stationNameWidth + 1 + 11,  # e.g. "ID:12345 Station Name (123 songs)"
-                                  formatStation(stations[row+(colHeight*col)]))
+            r = '  '.join(  # Separate columns by two spaces
+                ("{1:{0}}".format(
+                    3 + stationIDwidth + 1 + stationNameWidth + 1 + 11,  # e.g. "ID:12345 Station Name (123 songs)"
+                    formatStation(stations[row+(colHeight*col)]))
                  for col in range(numColumns)))
+
             rows.append(r)
 
         s = "\n".join(row for row in rows)
 
-    print s
+    return s
+
 def main():
 
     # **** Parse args
@@ -892,8 +895,8 @@ def main():
         # ***** List or play stations
         if args.find:
             # ****** List stations
-            printStations(stationMatches, queries, args.printDescriptions,
-                          sort=sortBy)
+            print formatStations(stationMatches, queries, args.printDescriptions,
+                                 sort=sortBy)
             return True
 
         else:
@@ -958,8 +961,8 @@ def main():
 
                 else:
                     # Just list stations
-                    printStations(stationMatches, queries,
-                                  args.printDescriptions, sort=sortBy)
+                    print formatStations(stationMatches, queries,
+                                         args.printDescriptions, sort=sortBy)
                     return False
 
 # ** __main__
