@@ -722,7 +722,7 @@ def main():
                         nargs='*',metavar='QUERY',
                         help="Exclude stations matching queries")
     parser.add_argument('-f', '--find',
-                        nargs='*',metavar='QUERY',
+                        action='store_true',
                         help="List stations matching queries")
     parser.add_argument('-d', '--descriptions',
                         dest='printDescriptions', action='store_true',
@@ -735,14 +735,14 @@ def main():
                         const='localhost:6600',
                         help="Play with MPD server.  Default: localhost:6600")
     parser.add_argument('-r', '--random',
-                        nargs='*',metavar='QUERY',
+                        action='store_true',
                         help="Play one random station matching query")
     parser.add_argument('-R', '--random-stations',
                         dest='randomStations',
-                        nargs='*',metavar='QUERY',
+                        action='store_true',
                         help="Play one song each from random stations matching queries")
-    parser.add_argument('-s', '--station',
-                        nargs='*', metavar='STATION',
+    parser.add_argument(dest='queries',
+                        nargs='*', metavar='STATION/QUERY',
                         help="A station name, partial station name, or station ID number")
     parser.add_argument('--sort',
                         choices=['name', 'songs', 'id'], default='songs',
@@ -771,18 +771,13 @@ def main():
     log.debug("Args: %s", args)
 
     # **** Check args
-    if (not (args.find or args.station or args.random or args.randomStations)
-        and args.listCategories is None):
-        log.error('Please provide a station or search string.')
+    if not args.queries and args.listCategories is None:
+        log.error('Please provide a station or query.')
         parser.print_help()
         return False
 
-    if args.find and args.station:
-        log.error('Please use either -f or -s but not both.')
-        return False
-
     if args.random and args.randomStations:
-        log.error('Please use either -r or -R but not both.')
+        log.error('Options -r and -R conflict.  Which do you want?  :)')
         return False
 
     # **** List categories
@@ -830,15 +825,12 @@ def main():
             sortBy = 'name'
 
     # **** Play or list stations
-    if args.station or args.find or args.random or args.randomStations:
+    if args.queries:
 
         # ***** Put together station list
         # Put all query strings together and remove dupes
-        queries = set([q
-                       for l in [args.station, args.find,
-                                 args.random, args.randomStations]
-                       if l
-                       for q in l])
+        queries = set([q for q in args.queries])
+
 
         # Compile list of stations found
         stationMatches = []
