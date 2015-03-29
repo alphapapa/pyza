@@ -5,7 +5,6 @@
 + Python 2.7+ (it might work on 2.6...)
 + VLC or MPD
 + MPD support requires =python-mpd= >= version 0.5.4.  This is from the forked version known as =python-mpd2=, which may not be packaged in your distro yet.  You can install it with =pip=.
-+ [[http://deron.meranda.us/python/demjson/][python-demjson]] It's packaged in Debian/Ubuntu, or you can install with =pip install demjson=.
   
 ** Usage
 It's pretty self-explanatory:

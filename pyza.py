@@ -5,7 +5,6 @@
 
 # ** Imports
 import argparse
-import demjson
 import logging
 import random
 import re
@@ -13,6 +12,7 @@ import requests
 import subprocess
 import sys
 import time
+import yaml
 
 from bs4 import BeautifulSoup
 from collections import namedtuple
@@ -128,12 +128,9 @@ class Songza(object):
         raw = raw[start-1:]
         end = re.search('\n\s*}\);\s*\n', raw).start()
 
-        # TODO: Try to use the built-in Python json module instead of
-        # demjson.  Would make for one less dependency.
-
         # Just add the brace at the end. Easier than fiddling with the
         # end of the raw string.
-        json = demjson.decode(raw[:end] + '}')
+        json = yaml.load(raw[:end] + '}')
 
         categories = [c['slug'] for c in json['galleries']]
 
@@ -141,16 +138,16 @@ class Songza(object):
 
     @staticmethod
     def _decodeStationCache(html):
-        """
-        Returns list of dicts of stations for Songza HTML.
+        """Return list of dicts of stations for Songza HTML.
 
         In the Songza pages there is a JSON with all of the staton
         info contained in Models.StationCache.set(.  We get all of the
         data contained in the curly braces and convert it to a JSON
-        using demjson, becausePython's builtin JSON module is too
-        strict for this JSON's strucure.  The keys of the JSON are the
-        station IDs and the values are the dicts we'd get from the
-        API.  So we only return the values of the decoded JSON.
+        using the YAML module, because Python's builtin JSON module is
+        too strict for this JSON's structure (e.g. property names are
+        not quoted).  The keys of the JSON are the station IDs and the
+        values are the dicts we'd get from the API.  So we only return
+        the values of the decoded JSON.
         """
 
         # TODO: Should we use BeautifulSoup for this?
@@ -158,8 +155,7 @@ class Songza(object):
         html = html[start:]
         end =  html.find('})') + 1
 
-        return demjson.decode(html[:end]).values()
-
+        return yaml.load(html[:end]).values()
 
 
 class Track(object):
