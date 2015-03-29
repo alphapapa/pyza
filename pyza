@@ -731,42 +731,53 @@ def main():
         description="A terminal-based Songza client.  Plays with VLC by default, or with MPD.",
         epilog="examples:\n  pyza -f movies\n  pyza -r mood:happy\n  pyza -R g:jazz g:classical -e christmas",
         formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-l',
-                        dest='listCategories', nargs='*',
-                        choices=Songza.CATEGORY_TYPES.keys(),
-                        help="List available categories")
-    parser.add_argument('-e', '--exclude',
-                        nargs='*',metavar='string',
-                        help="Exclude stations whose names or descriptions match strings")
-    parser.add_argument('-f', '--find',
-                        action='store_true',
-                        help="List stations matching queries")
-    parser.add_argument('-d', '--descriptions',
-                        dest='printDescriptions', action='store_true',
-                        help="Show station descriptions")
-    parser.add_argument('-n', '--names-only',
-                        dest='namesOnly', action='store_true',
-                        help="Only search station names, not station descriptions or other data")
-    parser.add_argument('-m', '--mpd',
-                        nargs='?', metavar='host[:port]',
-                        const='localhost:6600',
-                        help="Play with MPD server.  Default: localhost:6600")
-    parser.add_argument('-r', '--random',
-                        action='store_true',
-                        help="Play one random station from stations matching queries")
-    parser.add_argument('-R', '--random-stations',
-                        dest='randomStations',
-                        action='store_true',
-                        help="Play one song each from random stations matching queries")
-    parser.add_argument(dest='queries',
-                        nargs='*', metavar='STATION|QUERY',
-                        help=fill("A station ID number, station name, partial station name, or category query like activity:driving, decade:1960s, genre:jazz, or mood:happy.  You may abbreviate the category type like g:jazz, and you may use multiple queries which will be ORed together."))
-    parser.add_argument('--sort',
-                        choices=['name', 'songs', 'id'], default='songs',
-                        help="Sort station list (default: number of songs)")
-    parser.add_argument("-v", "--verbose",
-                        action="count",
-                        help="Be verbose, up to -vv")
+    parser.add_argument(
+        '-l',
+        dest='listCategories', nargs='*',
+        choices=Songza.CATEGORY_TYPES.keys(),
+        help="List available categories")
+    parser.add_argument(
+        '-e', '--exclude',
+        nargs='*',metavar='string',
+        help="Exclude stations whose names or descriptions match strings")
+    parser.add_argument(
+        '-f', '--find',
+        action='store_true',
+        help="List stations matching queries")
+    parser.add_argument(
+        '-d', '--descriptions',
+        dest='printDescriptions', action='store_true',
+        help="Show station descriptions")
+    parser.add_argument(
+        '-n', '--names-only',
+        dest='namesOnly', action='store_true',
+        help="Only search station names, not station descriptions or other data")
+    parser.add_argument(
+        '-m', '--mpd',
+        nargs='?', metavar='host[:port]',
+        const='localhost:6600',
+        help="Play with MPD server.  Default: localhost:6600")
+    parser.add_argument(
+        '-r', '--random',
+        action='store_true',
+        help="Play one random station from stations matching queries")
+    parser.add_argument(
+        '-R', '--random-stations',
+        dest='randomStations',
+        action='store_true',
+        help="Play one song each from random stations matching queries")
+    parser.add_argument(
+        dest='queries',
+        nargs='*', metavar='STATION|QUERY',
+        help=fill("A station ID number, station name, partial station name, or category query like activity:driving, decade:1960s, genre:jazz, or mood:happy.  You may abbreviate the category type like g:jazz, and you may use multiple queries which will be ORed together."))
+    parser.add_argument(
+        '--sort',
+        choices=['name', 'songs', 'id'], default='songs',
+        help="Sort station list (default: number of songs)")
+    parser.add_argument(
+        "-v", "--verbose",
+        action="count",
+        help="Be verbose, up to -vv")
     args = parser.parse_args()
 
     # **** Setup logging
