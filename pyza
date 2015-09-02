@@ -654,7 +654,7 @@ class VlcPlayer:
 
         try:
             response = self._sendCommand("get_length", readline=True)
-            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
+            match = VlcPlayer.REGEXP_TIME_REMAINING.search(response)
 
             if match:
                 duration = int(match.group(1))
@@ -663,7 +663,7 @@ class VlcPlayer:
                                response)
 
             response = self._sendCommand("getTime", readline=True)
-            match = VlcPlayer.TIME_REMAINING_REGEX.search(response)
+            match = VlcPlayer.REGEXP_TIME_REMAINING.search(response)
 
             if match:
                 remaining = int(match.group(1))
