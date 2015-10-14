@@ -363,6 +363,15 @@ class MPD(Player):
 
         self.mpd.connect(self.host, self.port)
 
+        # Check MPD version
+        if int(self.mpd.mpd_version.split('.')[1]) < 19:
+            self.log.warning(
+                "MPD version < 19: %s.  It would be good to upgrade.  Disabling"
+                " addtags, which means that track info won't appear in MPD.  :(",
+                self.mpd.mpd_version)
+
+            self._addTags = self._addTagsDummy
+
         self.nextSongID = None  # Song ID number
 
         self._getPlaylist()
@@ -464,6 +473,11 @@ class MPD(Player):
 
         # Execute command list
         self.mpd.command_list_end()
+
+    def _addTagsDummy(self, songID, track):
+        '''Dummy method to replace _addTags when MPD version is < 0.19'''
+
+        self.log.debug("Not adding tags.")
 
     def _play(self, songID):
         '''Plays songID.'''

@@ -7,6 +7,8 @@
 + VLC or MPD
 + MPD support requires =python-mpd= >= version 0.5.4.  This is from the forked version known as =python-mpd2=, which may not be packaged in your distro yet.  You can install it with =pip=.
 
+*Note:* MPD versions older than 0.19 don't have the ~addtags~ command, which means that track info won't appear in the playlist.
+
 ** Usage
 It's pretty self-explanatory:
 
