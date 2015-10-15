@@ -743,7 +743,7 @@ def main():
     # **** Parse args
     parser = argparse.ArgumentParser(
         description="A terminal-based Songza client.  Plays with VLC by default, or with MPD.",
-        epilog="examples:\n  pyza -f movies\n  pyza -r mood:happy\n  pyza -R g:jazz g:classical -e christmas",
+        epilog="examples:\n  pyza -f movies\n  pyza -r mood:happy\n  pyza -R g:jazz g:classical -e christmas\n  pyza -R a:sleeping -i classical jazz",
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
         '-l',
@@ -752,8 +752,12 @@ def main():
         help="List available categories")
     parser.add_argument(
         '-e', '--exclude',
-        nargs='*',metavar='string',
-        help="Exclude stations whose names or descriptions match strings")
+        nargs='*',metavar='term',
+        help="Exclude stations whose names or descriptions match any term")
+    parser.add_argument(
+        '-i', '--include',
+        nargs='*',metavar='term',
+        help="Include only stations whose names or descriptions match at least one term")
     parser.add_argument(
         '-f', '--find',
         action='store_true',
@@ -908,8 +912,17 @@ def main():
                               for station in stationMatches
                               if q.lower() in station.name.lower()]
 
+        if args.include:
+            # Include only matching stations
+            stationMatches = [station
+                              for station in stationMatches
+                              if any(i.lower() in s
+                                     for i in args.include
+                                     for s in [station.name.lower(),
+                                               station.description.lower()])]
+
         # Exclude stations
-        if args.exclude:
+        elif args.exclude:
             countBefore = len(stationMatches)
             stationMatches = [station
                               for station in stationMatches

@@ -15,8 +15,8 @@ It's pretty self-explanatory:
 #+BEGIN_SRC
 usage: pyza [-h]
             [-l [{activities,genres,decades,moods} [{activities,genres,decades,moods} ...]]]
-            [-e [string [string ...]]] [-f] [-d] [-n] [-m [host[:port]]] [-r]
-            [-R] [--sort {name,songs,id}] [-v]
+            [-e [term [term ...]]] [-i [term [term ...]]] [-f] [-d] [-n]
+            [-m [host[:port]]] [-r] [-R] [--sort {name,songs,id}] [-v]
             [STATION|QUERY [STATION|QUERY ...]]
 
 A terminal-based Songza client.  Plays with VLC by default, or with MPD.
@@ -31,8 +31,10 @@ optional arguments:
   -h, --help            show this help message and exit
   -l [{activities,genres,decades,moods} [{activities,genres,decades,moods} ...]]
                         List available categories
-  -e [string [string ...]], --exclude [string [string ...]]
-                        Exclude stations whose names or descriptions match strings
+  -e [term [term ...]], --exclude [term [term ...]]
+                        Exclude stations whose names or descriptions match any term
+  -i [term [term ...]], --include [term [term ...]]
+                        Include only stations whose names or descriptions match at least one term
   -f, --find            List stations matching queries
   -d, --descriptions    Show station descriptions
   -n, --names-only      Only search station names, not station descriptions or other data
@@ -49,13 +51,24 @@ examples:
   pyza -f movies
   pyza -r mood:happy
   pyza -R g:jazz g:classical -e christmas
+  pyza -R a:sleeping -i classical jazz -e sing
 #+END_SRC
 ** Examples
-=pyza.py -R piano jazz -e christmas= would play one track at a time from random "jazz" and "piano" stations, but not Christmas stations.
+=pyza -f movies= lists stations containing /movies/ in their names or descriptions.
 
-=pyza.py -f g:jazz= would list stations from the jazz genre.
+=pyza -r mood:happy= plays a random station that fits a happy mood.
 
-=pyza.py -n -s under\ the\ boardwalk= would play the station "Under the Boardwalk".  If you left off =-n=, it would instead list multiple stations, because it would also search on station descriptions.  (You can--and should--quote strings instead of escaping the spaces, but due to a problem in the parser for this readme file, quotes don't work within code strings.  Doh...)
+=pyza -R g:jazz g:classical= plays one track at a time from random stations in the /jazz/ or /classical/ genres.
+
+=pyza -R piano jazz -e christmas= plays one track at a time from random stations containing /jazz/ or /piano/ in their names or descriptions, but not stations containing /Christmas/.
+
+=pyza -R a:sleeping -i classical jazz -e sing= plays one track at a time from random stations suitable for sleeping, but only if they contain /classical/ or /jazz/ in their names or descriptions, and only if they do *not* contain /sing/ in their names or descriptions.  Because falling asleep to someone singing ain't always easy.
+
+=pyza -f d:1960s= finds and lists stations from the 1960s.
+
+=pyza 1744730= plays station #1744730.
+
+=pyza -n under\ the\ boardwalk= plays the station named /Under the Boardwalk/.  If you left off =-n=, it would instead list multiple stations, because it would also search on station descriptions.  (You can--and should--quote strings instead of escaping the spaces, but due to a problem in the parser for this readme file, quotes don't work within code strings.  Doh...)
 
 ** TODOs
 + Use signals or something to allow skipping tracks and voting.
