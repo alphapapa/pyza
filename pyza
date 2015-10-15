@@ -113,8 +113,12 @@ class Songza(object):
                             station['song_count'], station['description'])
                     for station in json]
 
-        Songza.logger.debug('Found %s stations for query "%s": %s',
-                            len(stations), query, [station
+        Songza.logger.debug(u'Found %s stations for query "%s": %s',
+                            # Not sure why I have to %-format the
+                            # station for this to work. I thought that
+                            # returning Unicode-literal strings in
+                            # Station.__repr__/__str__ would handle this.
+                            len(stations), query, [u"%s" % station
                                                    for station in stations])
 
         return stations
@@ -200,9 +204,9 @@ class Station(object):
         assert(stationID or name)
 
         self.id = stationID
-        self.name = name.encode('utf8') if name else None
+        self.name = name if name else None
         self.songCount = songCount
-        self.description = description.encode('utf8') if description else None
+        self.description = description if description else None
 
         self.previousTrack = None
         self.track = None
@@ -220,9 +224,9 @@ class Station(object):
         attributes.'''
 
         r = Songza.request(self.path).json()
-        self.name = r['name'].encode('utf8')
+        self.name = r['name']
         self.songCount = r['song_count']
-        self.description = r['description'].encode('utf8')
+        self.description = r['description']
 
     def __eq__(self, other):
         return self.id == other.id
@@ -717,10 +721,10 @@ def formatStations(stations, query, descriptions=False, sort='name'):
         def formatStation(station):
             return u"ID {0:>{1}}: {2:{3}}".format(
                 station.id, stationIDwidth,
-                u"%s (%s songs)" % (station.name.decode('utf8'), station.songCount),
+                u"%s (%s songs)" % (station.name, station.songCount),
                 stationNameWidth + 1 + 11)
 
-        stationNameWidth = max(len(station.name.decode('utf8')) for station in stations)
+        stationNameWidth = max(len(station.name) for station in stations)
         numColumns = 2
         colHeight = len(stations) / numColumns
 
