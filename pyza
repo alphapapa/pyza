@@ -79,14 +79,14 @@ class Songza(object):
                     categoryType = c
 
                     # Get the query part (i.e. 'jazz' for 'g:jazz')
-                    category = re.sub('^.*:', '', query)
+                    category = query.split(':')[1]
 
                     break
 
         json = []
 
-        # Category search
         if category:
+            # Category search
 
             # Look up proper genre for aliases (e.g. 'classical_opera'
             # for 'classical')
@@ -104,8 +104,8 @@ class Songza(object):
                 # Decode the StationCache JSON object
                 json = Songza._decodeStationCache(response.text)
 
-        # Plain search
         else:
+            # Plain search
             json = Songza.request(Songza.SEARCH_PATH,
                                   params={'query': query}).json()
 
