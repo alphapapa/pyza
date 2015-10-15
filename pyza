@@ -231,10 +231,10 @@ class Station(object):
         return int(self.id)
 
     def __repr__(self):
-        return '%s: %s (%s songs)' % (self.id, self.name, self.songCount)
+        return u'%s: %s (%s songs)' % (self.id, self.name, self.songCount)
 
     def __str__(self):
-        return '%s: %s (%s songs): %s' % (self.id, self.name,
+        return u'%s: %s (%s songs): %s' % (self.id, self.name,
                                           self.songCount, self.description)
 
     def next(self):
@@ -705,7 +705,7 @@ def formatStations(stations, query, descriptions=False, sort='name'):
         # Print with descriptions
 
         s = "\n".join(
-            fill("{0:>{1}}: {2} ({3} songs): {4}".format(
+            fill(u"{0:>{1}}: {2} ({3} songs): {4}".format(
                 station.id, stationIDwidth, station.name,
                 station.songCount, station.description),
                  subsequent_indent=' ' * (stationIDwidth + 2))
@@ -715,19 +715,19 @@ def formatStations(stations, query, descriptions=False, sort='name'):
         # Print without descriptions
 
         def formatStation(station):
-            return "ID {0:>{1}}: {2:{3}}".format(
+            return u"ID {0:>{1}}: {2:{3}}".format(
                 station.id, stationIDwidth,
-                "%s (%s songs)" % (station.name, station.songCount),
+                u"%s (%s songs)" % (station.name.decode('utf8'), station.songCount),
                 stationNameWidth + 1 + 11)
 
-        stationNameWidth = max(len(station.name) for station in stations)
+        stationNameWidth = max(len(station.name.decode('utf8')) for station in stations)
         numColumns = 2
         colHeight = len(stations) / numColumns
 
         rows = []
         for row in range(colHeight):
             r = '  '.join(  # Separate columns by two spaces
-                ("{1:{0}}".format(
+                (u"{1:{0}}".format(
                     3 + stationIDwidth + 1 + stationNameWidth + 1 + 11,  # e.g. "ID:12345 Station Name (123 songs)"
                     formatStation(stations[row+(colHeight*col)]))
                  for col in range(numColumns)))
