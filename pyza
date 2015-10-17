@@ -231,11 +231,11 @@ class Station(object):
         return int(self.id)
 
     def __repr__(self):
-        return u'%s: %s (%s songs)' % (self.id, self.name, self.songCount)
+        return u'%s: %s (%s songs)' % (self.id, self.name.decode('utf8'), self.songCount)
 
     def __str__(self):
-        return u'%s: %s (%s songs): %s' % (self.id, self.name,
-                                          self.songCount, self.description)
+        return u'%s: %s (%s songs): %s' % (self.id, self.name.decode('utf8'),
+                                           self.songCount, self.description.decode('utf8'))
 
     def next(self):
         '''Set the station's current track to the next track and returns next track.'''
