@@ -71,6 +71,7 @@ examples:
 =pyza -n under\ the\ boardwalk= plays the station named /Under the Boardwalk/.  If you left off =-n=, it would instead list multiple stations, because it would also search on station descriptions.  (You can--and should--quote strings instead of escaping the spaces, but due to a problem in the parser for this readme file, quotes don't work within code strings.  Doh...)
 
 ** TODOs
++ Use [[https://github.com/simon-weber/gmusicapi/pull/460][gmusicapi]] to support new Google Now stuff.
 + Use signals or something to allow skipping tracks and voting.
 + Somehow provide access to the Songza concierge service?
 + +Allow searching by activity, genre, or mood.+
